@@ -1,7 +1,7 @@
 """Tests for Deck class."""
 
 import pytest
-from src.mtgengine.deck import Deck
+from src.mtgengine.zone.deck import Deck
 from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
 

@@ -7,7 +7,7 @@ from src.mtgengine.zone.graveyard import Graveyard
 from src.mtgengine.zone.exile import Exile
 from src.mtgengine.zone.hand import Hand
 from src.mtgengine.zone.stack import Stack
-from src.mtgengine.deck import Deck
+from src.mtgengine.zone.deck import Deck
 from src.mtgengine.player import Player
 from src.mtgengine.game import Game
 
