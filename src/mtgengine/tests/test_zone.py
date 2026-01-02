@@ -24,7 +24,7 @@ class TestZone:
     def test_add_card_to_zone(self) -> None:
         """Test adding a card to a zone."""
         zone = Zone()
-        card = Card("Test Card", 2, "Creature")
+        card = Card("Test Card")
         zone.add_card(card)
         assert len(zone.cards) == 1
         assert zone.cards[0] == card
@@ -32,8 +32,8 @@ class TestZone:
     def test_add_multiple_cards_to_zone(self) -> None:
         """Test adding multiple cards to a zone."""
         zone = Zone()
-        card1 = Card("Card 1", 1, "Sorcery")
-        card2 = Card("Card 2", 2, "Creature")
+        card1 = Card("Card 1")
+        card2 = Card("Card 2")
         zone.add_card(card1)
         zone.add_card(card2)
         assert len(zone.cards) == 2
@@ -43,7 +43,7 @@ class TestZone:
     def test_remove_card_from_zone(self) -> None:
         """Test removing a card from a zone."""
         zone = Zone()
-        card = Card("Test Card", 2, "Creature")
+        card = Card("Test Card")
         zone.add_card(card)
         zone.remove_card(card)
         assert len(zone.cards) == 0
@@ -51,8 +51,8 @@ class TestZone:
     def test_remove_card_not_in_zone(self) -> None:
         """Test removing a card that is not in the zone."""
         zone = Zone()
-        card1 = Card("Card 1", 1, "Sorcery")
-        card2 = Card("Card 2", 2, "Creature")
+        card1 = Card("Card 1")
+        card2 = Card("Card 2")
         zone.add_card(card1)
         zone.remove_card(card2)
         assert len(zone.cards) == 1
@@ -61,7 +61,7 @@ class TestZone:
     def test_get_cards_returns_copy(self) -> None:
         """Test that get_cards returns a copy of the card list."""
         zone = Zone()
-        card = Card("Test Card", 2, "Creature")
+        card = Card("Test Card")
         zone.add_card(card)
         cards = zone.get_cards()
         cards.clear()
@@ -80,7 +80,7 @@ class TestBattlefield:
     def test_battlefield_add_card(self) -> None:
         """Test adding a card to the Battlefield."""
         battlefield = Battlefield()
-        card = Card("Creature", 3, "Creature")
+        card = Card("Creature")
         battlefield.add_card(card)
         assert len(battlefield.cards) == 1
 
@@ -102,7 +102,7 @@ class TestGraveyard:
     def test_graveyard_add_card(self) -> None:
         """Test adding a card to the Graveyard."""
         graveyard = Graveyard()
-        card = Card("Dead Spell", 2, "Sorcery")
+        card = Card("Dead Spell")
         graveyard.add_card(card)
         assert len(graveyard.cards) == 1
 
@@ -124,7 +124,7 @@ class TestExile:
     def test_exile_add_card(self) -> None:
         """Test adding a card to Exile."""
         exile = Exile()
-        card = Card("Exiled Card", 4, "Creature")
+        card = Card("Exiled Card")
         exile.add_card(card)
         assert len(exile.cards) == 1
 
@@ -146,7 +146,7 @@ class TestHand:
     def test_hand_add_card(self) -> None:
         """Test adding a card to Hand."""
         hand = Hand()
-        card = Card("Card in Hand", 2, "Instant")
+        card = Card("Card in Hand")
         hand.add_card(card)
         assert len(hand.cards) == 1
 
@@ -168,7 +168,7 @@ class TestStack:
     def test_stack_add_card(self) -> None:
         """Test adding a card to the Stack."""
         stack = Stack()
-        card = Card("Stacked Spell", 3, "Sorcery")
+        card = Card("Stacked Spell")
         stack.add_card(card)
         assert len(stack.cards) == 1
 
