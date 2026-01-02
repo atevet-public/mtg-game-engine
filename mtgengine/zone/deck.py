@@ -1,6 +1,6 @@
 """Deck class representing an ordered collection of cards."""
 
-from src.mtgengine.zone import Zone
+from mtgengine.zone import Zone
 
 
 class Deck(Zone):

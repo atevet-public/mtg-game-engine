@@ -1,8 +1,8 @@
 """Tests for Battlefield zone."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
-from src.mtgengine.zone.battlefield import Battlefield
+from mtgengine.card import Card
+from mtgengine.zone import Zone
+from mtgengine.zone.battlefield import Battlefield
 
 
 class TestBattlefield:

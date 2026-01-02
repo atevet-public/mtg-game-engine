@@ -1,6 +1,6 @@
 """Exile zone representing exile in Magic: The Gathering."""
 
-from src.mtgengine.zone import Zone
+from mtgengine.zone import Zone
 
 
 class Exile(Zone):

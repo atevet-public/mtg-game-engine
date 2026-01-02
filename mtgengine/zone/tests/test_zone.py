@@ -1,7 +1,7 @@
 """Tests for Zone base class."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
+from mtgengine.card import Card
+from mtgengine.zone import Zone
 
 
 class TestZone:

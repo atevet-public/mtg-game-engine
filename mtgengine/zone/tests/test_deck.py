@@ -1,8 +1,8 @@
 """Tests for Deck class."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
-from src.mtgengine.zone.deck import Deck
+from mtgengine.card import Card
+from mtgengine.zone import Zone
+from mtgengine.zone.deck import Deck
 
 
 class TestDeck:

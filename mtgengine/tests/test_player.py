@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.mtgengine.player import Player
+from mtgengine.player import Player
 
 
 class TestPlayer:

@@ -1,6 +1,6 @@
 """Hand zone representing a player's hand in Magic: The Gathering."""
 
-from src.mtgengine.zone import Zone
+from mtgengine.zone import Zone
 
 
 class Hand(Zone):

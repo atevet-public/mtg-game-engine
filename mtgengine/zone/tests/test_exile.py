@@ -1,8 +1,8 @@
 """Tests for Exile zone."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
-from src.mtgengine.zone.exile import Exile
+from mtgengine.card import Card
+from mtgengine.zone import Zone
+from mtgengine.zone.exile import Exile
 
 
 class TestExile:

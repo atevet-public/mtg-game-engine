@@ -1,8 +1,8 @@
 """Tests for Hand zone."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
-from src.mtgengine.zone.hand import Hand
+from mtgengine.card import Card
+from mtgengine.zone import Zone
+from mtgengine.zone.hand import Hand
 
 
 class TestHand:

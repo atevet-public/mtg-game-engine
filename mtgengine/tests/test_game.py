@@ -1,6 +1,6 @@
 """Tests for Game class."""
 
-from src.mtgengine.game import Game
+from mtgengine.game import Game
 
 
 class TestGame:

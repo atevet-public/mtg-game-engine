@@ -1,6 +1,6 @@
 """Graveyard zone representing the graveyard in Magic: The Gathering."""
 
-from src.mtgengine.zone import Zone
+from mtgengine.zone import Zone
 
 
 class Graveyard(Zone):

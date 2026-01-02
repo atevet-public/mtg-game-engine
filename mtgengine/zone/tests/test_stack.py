@@ -1,8 +1,8 @@
 """Tests for Stack zone."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
-from src.mtgengine.zone.stack import Stack
+from mtgengine.card import Card
+from mtgengine.zone import Zone
+from mtgengine.zone.stack import Stack
 
 
 class TestStack:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.mtgengine.card import Card
+from mtgengine.card import Card
 
 
 class TestCard:

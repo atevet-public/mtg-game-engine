@@ -1,8 +1,8 @@
 """Tests for Graveyard zone."""
 
-from src.mtgengine.card import Card
-from src.mtgengine.zone import Zone
-from src.mtgengine.zone.graveyard import Graveyard
+from mtgengine.card import Card
+from mtgengine.zone import Zone
+from mtgengine.zone.graveyard import Graveyard
 
 
 class TestGraveyard:
