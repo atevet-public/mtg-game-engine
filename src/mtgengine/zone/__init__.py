@@ -1,6 +1,7 @@
 """Zone base class representing game areas in Magic: The Gathering."""
 
 from typing import List
+
 from src.mtgengine.card import Card
 
 

@@ -1,9 +1,8 @@
 """Tests for Exile zone."""
 
-import pytest
-from src.mtgengine.zone.exile import Exile
-from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
+from src.mtgengine.zone import Zone
+from src.mtgengine.zone.exile import Exile
 
 
 class TestExile:

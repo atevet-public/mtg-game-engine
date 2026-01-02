@@ -1,9 +1,8 @@
 """Tests for Deck class."""
 
-import pytest
-from src.mtgengine.zone.deck import Deck
-from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
+from src.mtgengine.zone import Zone
+from src.mtgengine.zone.deck import Deck
 
 
 class TestDeck:
@@ -34,11 +33,11 @@ class TestDeck:
         card1 = Card("Card 1")
         card2 = Card("Card 2")
         card3 = Card("Card 3")
-        
+
         deck.add_card(card1)
         deck.add_card(card2)
         deck.add_card(card3)
-        
+
         assert deck.cards[0] == card1
         assert deck.cards[1] == card2
         assert deck.cards[2] == card3
@@ -56,10 +55,10 @@ class TestDeck:
         deck = Deck()
         card1 = Card("Card 1")
         card2 = Card("Card 2")
-        
+
         deck.add_card(card1)
         deck.add_card(card2)
-        
+
         cards = deck.get_cards()
         assert len(cards) == 2
         assert cards[0] == card1

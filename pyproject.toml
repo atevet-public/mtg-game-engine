@@ -9,8 +9,21 @@ dependencies = []
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "ruff>=0.14.0",
+    "mypy>=1.11.0",
+    "black>=24.10.0",
+
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["src/mtgengine/"]
 addopts = "-v --cov=src/mtgengine --cov-report=term-missing"
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 100

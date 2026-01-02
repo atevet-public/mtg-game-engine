@@ -1,6 +1,7 @@
 """Tests for Card class."""
 
 import pytest
+
 from src.mtgengine.card import Card
 
 

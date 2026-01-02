@@ -1,6 +1,5 @@
 """Tests for Game class."""
 
-import pytest
 from src.mtgengine.game import Game
 
 

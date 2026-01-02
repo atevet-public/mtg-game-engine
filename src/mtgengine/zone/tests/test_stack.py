@@ -1,9 +1,8 @@
 """Tests for Stack zone."""
 
-import pytest
-from src.mtgengine.zone.stack import Stack
-from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
+from src.mtgengine.zone import Zone
+from src.mtgengine.zone.stack import Stack
 
 
 class TestStack:

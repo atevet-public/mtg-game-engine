@@ -1,6 +1,7 @@
 """Tests for Player class."""
 
 import pytest
+
 from src.mtgengine.player import Player
 
 

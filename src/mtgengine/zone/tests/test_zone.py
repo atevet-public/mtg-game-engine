@@ -1,8 +1,7 @@
 """Tests for Zone base class."""
 
-import pytest
-from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
+from src.mtgengine.zone import Zone
 
 
 class TestZone:

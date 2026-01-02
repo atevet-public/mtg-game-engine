@@ -1,9 +1,8 @@
 """Tests for Battlefield zone."""
 
-import pytest
-from src.mtgengine.zone.battlefield import Battlefield
-from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
+from src.mtgengine.zone import Zone
+from src.mtgengine.zone.battlefield import Battlefield
 
 
 class TestBattlefield:
