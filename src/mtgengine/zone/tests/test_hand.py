@@ -1,7 +1,7 @@
 """Tests for Hand zone."""
 
 import pytest
-from src.mtgengine.hand import Hand
+from src.mtgengine.zone.hand import Hand
 from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
 

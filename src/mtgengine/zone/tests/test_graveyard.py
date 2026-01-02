@@ -1,7 +1,7 @@
 """Tests for Graveyard zone."""
 
 import pytest
-from src.mtgengine.graveyard import Graveyard
+from src.mtgengine.zone.graveyard import Graveyard
 from src.mtgengine.zone import Zone
 from src.mtgengine.card import Card
 

@@ -12,5 +12,5 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["src/mtgengine/tests"]
+testpaths = ["src/mtgengine/"]
 addopts = "-v --cov=src/mtgengine --cov-report=term-missing"
