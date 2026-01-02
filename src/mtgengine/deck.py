@@ -9,4 +9,3 @@ class Deck(Zone):
     def __init__(self) -> None:
         """Initialize an empty Deck."""
         super().__init__()
-        self.name = "Deck"
