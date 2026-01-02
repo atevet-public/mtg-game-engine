@@ -17,7 +17,7 @@ class TestStack:
     def test_stack_add_card(self) -> None:
         """Test adding a card to the Stack."""
         stack = Stack()
-        card = Card("Stacked Spell")
+        card = Card("Stacked Spell", card_type="Instant")
         stack.add_card(card)
         assert len(stack.cards) == 1
 

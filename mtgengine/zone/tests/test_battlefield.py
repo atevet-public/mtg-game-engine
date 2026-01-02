@@ -17,7 +17,7 @@ class TestBattlefield:
     def test_battlefield_add_card(self) -> None:
         """Test adding a card to the Battlefield."""
         battlefield = Battlefield()
-        card = Card("Creature")
+        card = Card("Creature", card_type="Creature")
         battlefield.add_card(card)
         assert len(battlefield.cards) == 1
 

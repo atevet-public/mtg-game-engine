@@ -17,7 +17,7 @@ class TestGraveyard:
     def test_graveyard_add_card(self) -> None:
         """Test adding a card to the Graveyard."""
         graveyard = Graveyard()
-        card = Card("Dead Spell")
+        card = Card("Dead Spell", card_type="Creature")
         graveyard.add_card(card)
         assert len(graveyard.cards) == 1
 
