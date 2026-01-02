@@ -12,6 +12,7 @@ class TestDeck:
     def test_deck_initialization(self) -> None:
         """Test Deck initialization."""
         deck = Deck()
+        assert deck.name == "Deck"
         assert deck.cards == []
 
     def test_deck_is_zone(self) -> None:

@@ -8,5 +8,4 @@ class Hand(Zone):
 
     def __init__(self) -> None:
         """Initialize the Hand zone."""
-        super().__init__()
-        self.name = "Hand"
+        super().__init__("Hand")

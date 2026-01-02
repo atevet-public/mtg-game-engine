@@ -8,5 +8,4 @@ class Graveyard(Zone):
 
     def __init__(self) -> None:
         """Initialize the Graveyard zone."""
-        super().__init__()
-        self.name = "Graveyard"
+        super().__init__("Graveyard")

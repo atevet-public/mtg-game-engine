@@ -8,5 +8,4 @@ class Battlefield(Zone):
 
     def __init__(self) -> None:
         """Initialize the Battlefield zone."""
-        super().__init__()
-        self.name = "Battlefield"
+        super().__init__("Battlefield")

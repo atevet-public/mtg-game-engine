@@ -8,5 +8,4 @@ class Exile(Zone):
 
     def __init__(self) -> None:
         """Initialize the Exile zone."""
-        super().__init__()
-        self.name = "Exile"
+        super().__init__("Exile")

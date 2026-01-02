@@ -8,5 +8,4 @@ class Stack(Zone):
 
     def __init__(self) -> None:
         """Initialize the Stack zone."""
-        super().__init__()
-        self.name = "Stack"
+        super().__init__("Stack")

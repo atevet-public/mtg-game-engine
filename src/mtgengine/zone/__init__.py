@@ -7,8 +7,13 @@ from src.mtgengine.card import Card
 class Zone:
     """Base class for all game zones."""
 
-    def __init__(self) -> None:
-        """Initialize a Zone with an empty list of cards."""
+    def __init__(self, name: str) -> None:
+        """Initialize a Zone with an empty list of cards.
+
+        Args:
+            name: The name of the zone.
+        """
+        self.name = name
         self.cards: List[Card] = []
 
     def add_card(self, card: Card) -> None:
