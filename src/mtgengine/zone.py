@@ -1,4 +1,4 @@
-"""Zone classes representing different game areas in Magic: The Gathering."""
+"""Zone base class representing game areas in Magic: The Gathering."""
 
 from typing import List
 from src.mtgengine.card import Card
@@ -38,48 +38,3 @@ class Zone:
             A list of all cards in the zone.
         """
         return self.cards.copy()
-
-
-class Battlefield(Zone):
-    """Represents the battlefield zone."""
-
-    def __init__(self) -> None:
-        """Initialize the Battlefield zone."""
-        super().__init__()
-        self.name = "Battlefield"
-
-
-class Graveyard(Zone):
-    """Represents the graveyard zone."""
-
-    def __init__(self) -> None:
-        """Initialize the Graveyard zone."""
-        super().__init__()
-        self.name = "Graveyard"
-
-
-class Exile(Zone):
-    """Represents the exile zone."""
-
-    def __init__(self) -> None:
-        """Initialize the Exile zone."""
-        super().__init__()
-        self.name = "Exile"
-
-
-class Hand(Zone):
-    """Represents a player's hand zone."""
-
-    def __init__(self) -> None:
-        """Initialize the Hand zone."""
-        super().__init__()
-        self.name = "Hand"
-
-
-class Stack(Zone):
-    """Represents the stack zone."""
-
-    def __init__(self) -> None:
-        """Initialize the Stack zone."""
-        super().__init__()
-        self.name = "Stack"
