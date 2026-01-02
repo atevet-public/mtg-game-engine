@@ -1,5 +1,6 @@
 """ManaCost class representing a Magic: The Gathering mana cost."""
 
+from collections import defaultdict
 from dataclasses import dataclass
 
 
@@ -51,53 +52,25 @@ class ManaCost:
         Raises:
             ValueError: If notation contains invalid characters.
         """
-        white = 0
-        blue = 0
-        black = 0
-        red = 0
-        green = 0
-        colorless = 0
-        generic = 0
+        colors: dict[str, int] = defaultdict(int)
+        num_str = ""
 
-        i = 0
-        while i < len(notation):
-            char = notation[i]
+        for char in notation:
             if char.isdigit():
-                # Parse numeric prefix (e.g., "2" in "2WUB")
-                num_str = ""
-                while i < len(notation) and notation[i].isdigit():
-                    num_str += notation[i]
-                    i += 1
-                generic += int(num_str)
-            elif char == "W":
-                white += 1
-                i += 1
-            elif char == "U":
-                blue += 1
-                i += 1
-            elif char == "B":
-                black += 1
-                i += 1
-            elif char == "R":
-                red += 1
-                i += 1
-            elif char == "G":
-                green += 1
-                i += 1
-            elif char == "C":
-                colorless += 1
-                i += 1
+                num_str += char
+            elif char in "WUBRGC":
+                colors[char] += 1
             else:
                 raise ValueError(f"Invalid mana notation character: {char}")
 
         return cls(
-            white=white,
-            blue=blue,
-            black=black,
-            red=red,
-            green=green,
-            colorless=colorless,
-            generic=generic,
+            white=colors["W"],
+            blue=colors["U"],
+            black=colors["B"],
+            red=colors["R"],
+            green=colors["G"],
+            colorless=colors["C"],
+            generic=int(num_str) if num_str else 0,
         )
 
     def mana_value(self) -> int:
