@@ -1,0 +1,16 @@
+[project]
+name = "mtg-game-engine"
+version = "0.1.0"
+description = "A Magic: The Gathering game engine"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src/mtgengine/tests"]
+addopts = "-v --cov=src/mtgengine --cov-report=term-missing"
