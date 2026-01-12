@@ -92,4 +92,3 @@ class Card:
     def untap(self) -> None:
         """Mark the card as untapped."""
         self.tapped = False
-

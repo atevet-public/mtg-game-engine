@@ -60,4 +60,3 @@ class TestCard:
 
         card.untap()
         assert card.tapped is False
-
