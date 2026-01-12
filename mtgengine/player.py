@@ -24,3 +24,13 @@ class Player:
         self.graveyard = Graveyard()
         self.exile = Exile()
         self.battlefield = Battlefield()
+
+    def draw_from_deck(self, n: int) -> None:
+        """Draw n cards from the deck and add them to the player's hand.
+
+        Args:
+            n: Number of cards to draw.
+        """
+        cards = self.deck.draw(n)
+        for card in cards:
+            self.hand.add_card(card)
