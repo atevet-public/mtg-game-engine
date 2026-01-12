@@ -2,8 +2,10 @@
 name = "mtg-game-engine"
 version = "0.1.0"
 description = "A Magic: The Gathering game engine"
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.11"
+dependencies = [
+    "pyventus>=0.7.2",
+]
 
 [project.optional-dependencies]
 dev = [
