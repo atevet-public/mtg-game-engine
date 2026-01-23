@@ -45,6 +45,7 @@ class Turn:
 
         Args:
             turn_number: The number of the turn in the game.
+            active_player: The player whose turn it is.
         """
         self.turn_number = turn_number
         self.active_player = active_player
