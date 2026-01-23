@@ -46,7 +46,7 @@ class TestTurn:
         """Test that the Turn class advances all phases and steps."""
         num_events_handled = 0
 
-        @EventLinker.on(
+        events = (
             TurnBeginningPhaseEvent,
             TurnUntapStepEvent,
             TurnUpkeepStepEvent,
@@ -63,6 +63,8 @@ class TestTurn:
             TurnEndStepEvent,
             TurnCleanupStepEvent,
         )
+
+        @EventLinker.on(*events)
         def _handle_event(event) -> None:
             nonlocal num_events_handled
             num_events_handled += 1
@@ -71,4 +73,4 @@ class TestTurn:
         for _ in turn.phases_and_steps:
             pass
 
-        assert num_events_handled == 15
+        assert num_events_handled == len(events)

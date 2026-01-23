@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
-from mtgengine.player import Player
+from typing import TYPE_CHECKING
 from pyventus.events import EventEmitter, AsyncIOEventEmitter
+
+if TYPE_CHECKING:
+    from mtgengine.player import Player
 
 
 class Phase(Enum):
