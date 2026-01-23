@@ -1,4 +1,7 @@
-.PHONY: deps test lint fix
+.PHONY: install-uv deps test lint fix
+
+install-uv:
+	curl -LsSf https://astral.sh/uv/install.sh | sh
 
 deps:
 	uv pip install -e ".[dev]"
