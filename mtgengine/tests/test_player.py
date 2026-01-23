@@ -58,7 +58,7 @@ class TestPlayer:
         active_player = Player("Active", 20)
         turn = Mock(active_player=active_player, turn_number=1)
 
-        # Add a tapped permanent to the active player's battlefield
+        # Add a permanent to the active player's battlefield
         card = Mock()
         active_player.battlefield.add_card(card)
 
