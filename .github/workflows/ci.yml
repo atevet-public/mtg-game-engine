@@ -29,7 +29,12 @@ jobs:
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: make deps
+        run: |
+            uv venv .venv
+            source .venv/bin/activate
+            make deps
 
       - name: Run lint checks
-        run: make lint test
+        run: |
+            source .venv/bin/activate
+            make lint test
