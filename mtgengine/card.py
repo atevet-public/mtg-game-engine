@@ -69,6 +69,9 @@ class Card:
 
         self.rules_text = rules_text
 
+        # Simple tapped state for turn-based actions (e.g., untap step)
+        self.tapped = False
+
         # Numeric characteristics: must be int or None and non-negative
         for field_name, value in (
             ("power", power),
@@ -82,3 +85,10 @@ class Card:
                 raise ValueError(f"{field_name} must be non-negative")
             setattr(self, field_name, value)
 
+    def tap(self) -> None:
+        """Mark the card as tapped."""
+        self.tapped = True
+
+    def untap(self) -> None:
+        """Mark the card as untapped."""
+        self.tapped = False

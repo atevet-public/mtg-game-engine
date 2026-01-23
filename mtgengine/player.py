@@ -6,6 +6,22 @@ from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
 
+from pyventus.events import EventLinker
+
+from mtgengine.turn import TurnUntapStepEvent
+
+
+@EventLinker.on(TurnUntapStepEvent)
+def handle_untap_step(event: TurnUntapStepEvent) -> None:
+    """Handle the untap step event by untapping permanents of the active player.
+
+    Args:
+        event: The turn untap step event containing the turn and active player.
+    """
+    active_player = event.turn.active_player
+    for permanent in active_player.battlefield.get_cards():
+        permanent.untap()
+
 
 class Player:
     """Represents a Magic: The Gathering player."""
