@@ -34,7 +34,7 @@ jobs:
             source .venv/bin/activate
             make deps
 
-      - name: Run lint checks
+      - name: Run lint checks and unit tests
         run: |
             source .venv/bin/activate
             make lint test
