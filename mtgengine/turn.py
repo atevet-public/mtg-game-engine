@@ -50,29 +50,30 @@ class Turn:
         self.active_player = active_player
         self._event_emitter: EventEmitter = AsyncIOEventEmitter()
         self._phase_and_step_events = (
-            TurnBeginningPhaseEvent(self),
-            TurnUntapStepEvent(self),
-            TurnUpkeepStepEvent(self),
-            TurnDrawStepEvent(self),
-            TurnPrecombatMainPhaseEvent(self),
-            TurnCombatPhaseEvent(self),
-            TurnBeginningOfCombatStepEvent(self),
-            TurnDeclareAttackersStepEvent(self),
-            TurnDeclareBlockersStepEvent(self),
-            TurnCombatDamageStepEvent(self),
-            TurnEndOfCombatStepEvent(self),
-            TurnPostcombatMainPhaseEvent(self),
-            TurnEndingPhaseEvent(self),
-            TurnEndStepEvent(self),
-            TurnCleanupStepEvent(self),
+            TurnBeginningPhaseEvent,
+            TurnUntapStepEvent,
+            TurnUpkeepStepEvent,
+            TurnDrawStepEvent,
+            TurnPrecombatMainPhaseEvent,
+            TurnCombatPhaseEvent,
+            TurnBeginningOfCombatStepEvent,
+            TurnDeclareAttackersStepEvent,
+            TurnDeclareBlockersStepEvent,
+            TurnCombatDamageStepEvent,
+            TurnEndOfCombatStepEvent,
+            TurnPostcombatMainPhaseEvent,
+            TurnEndingPhaseEvent,
+            TurnEndStepEvent,
+            TurnCleanupStepEvent,
         )
 
     @property
     def phases_and_steps(self):
         """Generator to iterate through the phases and steps of the turn."""
         for event in self._phase_and_step_events:
-            self._event_emitter.emit(event)
-            yield event
+            event_instance = event(self)
+            self._event_emitter.emit(event_instance)
+            yield event_instance
 
 
 @dataclass
