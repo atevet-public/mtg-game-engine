@@ -1,42 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import TYPE_CHECKING
 from pyventus.events import EventEmitter, AsyncIOEventEmitter
 
 if TYPE_CHECKING:
     from mtgengine.player import Player
-
-
-class Phase(Enum):
-    """Represents the five phases of a Magic: The Gathering turn."""
-
-    BEGINNING = "beginning"
-    PRECOMBAT_MAIN = "precombat main"
-    COMBAT = "combat"
-    POSTCOMBAT_MAIN = "postcombat main"
-    ENDING = "ending"
-
-
-class Step(Enum):
-    """Represents steps within phases."""
-
-    # Beginning phase steps
-    UNTAP = "untap"
-    UPKEEP = "upkeep"
-    DRAW = "draw"
-
-    # Combat phase steps
-    BEGIN_COMBAT = "beginning of combat"
-    DECLARE_ATTACKERS = "declare attackers"
-    DECLARE_BLOCKERS = "declare blockers"
-    COMBAT_DAMAGE = "combat damage"
-    END_COMBAT = "end of combat"
-
-    # Ending phase steps
-    END = "end step"
-    CLEANUP = "cleanup"
 
 
 class Turn:
