@@ -44,6 +44,14 @@ class TestPlayer:
         assert isinstance(player.exile, Exile)
         assert isinstance(player.battlefield, Battlefield)
 
+    def test_player_has_mana_pool_and_poison_counters(self) -> None:
+        """Test that a player has mana_pool and poison_counters initialized."""
+        from mtgengine.mana_pool import ManaPool
+
+        player = Player("Test", 20)
+        assert isinstance(player.mana_pool, ManaPool)
+        assert player.poison_counters == 0
+
     def test_player_zones_are_empty(self) -> None:
         """Test that a player's zones start empty."""
         player = Player("Test", 20)

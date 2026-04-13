@@ -20,6 +20,9 @@ class TestGame:
         game = Game([player1, player2])
         assert game.players == [player1, player2]
         assert isinstance(game.stack, Stack)
+        assert game.turn_number == 0
+        assert game.active_player is None
+        assert game.priority_player is None
 
     def test_game_single_player(self) -> None:
         """Test that a game can be created with a single player."""
@@ -64,6 +67,10 @@ class TestGame:
         assert game.current_player_index is not None
         assert 0 <= game.current_player_index < len(game.players)
 
+        # Active player should be set
+        assert game.active_player is not None
+        assert game.active_player in game.players
+
     def test_start_game_without_rng_parameter(self) -> None:
         """Test that start_game works without an explicit RNG parameter."""
         # Create players with 20 cards each
@@ -89,3 +96,7 @@ class TestGame:
         # Current player should be set to a valid index
         assert game.current_player_index is not None
         assert 0 <= game.current_player_index < len(game.players)
+
+        # Active player should be set
+        assert game.active_player is not None
+        assert game.active_player in game.players

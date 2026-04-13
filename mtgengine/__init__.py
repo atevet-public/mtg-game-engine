@@ -5,7 +5,10 @@ from mtgengine.card_definition import CardDefinition
 from mtgengine.card_repository import CardRepository
 from mtgengine.game import Game
 from mtgengine.mana_cost import ManaCost
+from mtgengine.mana_pool import ManaPool
+from mtgengine.permanent import Permanent
 from mtgengine.player import Player
+from mtgengine.stack_object import StackObject
 from mtgengine.zone import Zone
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.deck import Deck
@@ -19,6 +22,9 @@ __all__ = [
     "CardDefinition",
     "CardRepository",
     "ManaCost",
+    "ManaPool",
+    "Permanent",
+    "StackObject",
     "Zone",
     "Battlefield",
     "Graveyard",

@@ -23,6 +23,9 @@ class Game:
         self.players = players
         self.stack = Stack()
         self.current_player_index: int | None = None
+        self.turn_number: int = 0
+        self.active_player: Player | None = None
+        self.priority_player: Player | None = None
 
     def start_game(self, rng: random.Random | None = None) -> None:
         """Start the game: shuffle decks, deal 7 cards to each player, and select first player.
@@ -42,3 +45,16 @@ class Game:
 
         # Select first player randomly
         self.current_player_index = rng.randrange(len(self.players))
+        self.active_player = self.players[self.current_player_index]
+
+    def check_state_based_actions(self) -> bool:
+        """Check and apply state-based actions. Returns True if any were applied."""
+        return False  # Implemented in Phase 4
+
+    def pass_priority(self, player: Player) -> None:
+        """Pass priority from the given player to the next."""
+        pass
+
+    def advance_to_next_step(self) -> None:
+        """Advance the game to the next step/phase."""
+        pass

@@ -1,5 +1,6 @@
 """Player class representing a Magic: The Gathering player."""
 
+from mtgengine.mana_pool import ManaPool
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
@@ -40,6 +41,8 @@ class Player:
         self.graveyard = Graveyard()
         self.exile = Exile()
         self.battlefield = Battlefield()
+        self.mana_pool = ManaPool()
+        self.poison_counters: int = 0
 
     def draw_from_deck(self, n: int) -> None:
         """Draw n cards from the deck and add them to the player's hand.
