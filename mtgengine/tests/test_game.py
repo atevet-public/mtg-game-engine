@@ -71,6 +71,10 @@ class TestGame:
         assert game.active_player is not None
         assert game.active_player in game.players
 
+        # Priority player should be set
+        assert game.priority_player is not None
+        assert game.priority_player == game.active_player
+
     def test_start_game_without_rng_parameter(self) -> None:
         """Test that start_game works without an explicit RNG parameter."""
         # Create players with 20 cards each
@@ -100,3 +104,7 @@ class TestGame:
         # Active player should be set
         assert game.active_player is not None
         assert game.active_player in game.players
+
+        # Priority player should be set
+        assert game.priority_player is not None
+        assert game.priority_player == game.active_player

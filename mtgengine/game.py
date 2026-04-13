@@ -46,15 +46,36 @@ class Game:
         # Select first player randomly
         self.current_player_index = rng.randrange(len(self.players))
         self.active_player = self.players[self.current_player_index]
+        self.priority_player = self.active_player
 
     def check_state_based_actions(self) -> bool:
         """Check and apply state-based actions. Returns True if any were applied."""
         return False  # Implemented in Phase 4
 
     def pass_priority(self, player: Player) -> None:
-        """Pass priority from the given player to the next."""
-        pass
+        """Pass priority from the given player to the next player in APNAP order.
+
+        Called when a player explicitly passes priority or takes no action.
+        If all players pass in succession with an empty stack, the current
+        step/phase ends. If all players pass with a non-empty stack, the
+        top stack object resolves.
+
+        Args:
+            player: The player passing priority. Should be self.priority_player.
+
+        Note:
+            Full implementation deferred to Phase 4.
+        """
+        pass  # TODO(Phase 4): implement APNAP priority rotation
 
     def advance_to_next_step(self) -> None:
-        """Advance the game to the next step/phase."""
-        pass
+        """Advance the game to the next step or phase in turn order.
+
+        Responsible for: draining mana pools, resetting summoning sickness
+        for newly controlled permanents, incrementing turn_number at the
+        start of a new turn, and setting active_player and priority_player.
+
+        Note:
+            Full implementation deferred to Phase 4.
+        """
+        pass  # TODO(Phase 4): implement step/phase state machine

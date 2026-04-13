@@ -34,7 +34,12 @@ class ManaPool:
 
         Returns:
             Amount of mana available of that color.
+
+        Raises:
+            ValueError: If color is invalid.
         """
+        if color not in MANA_COLORS and color != "generic":
+            raise ValueError(f"Invalid mana color: {color}")
         return self._mana.get(color, 0)
 
     def total(self) -> int:
@@ -60,7 +65,14 @@ class ManaPool:
 
         Returns:
             True if mana was spent successfully, False if insufficient mana.
+
+        Raises:
+            ValueError: If color is invalid or amount is less than 1.
         """
+        if color not in MANA_COLORS and color != "generic":
+            raise ValueError(f"Invalid mana color: {color}")
+        if amount < 1:
+            raise ValueError("Amount must be at least 1")
         if self._mana.get(color, 0) < amount:
             return False
         self._mana[color] -= amount

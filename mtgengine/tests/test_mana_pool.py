@@ -125,3 +125,29 @@ class TestManaPool:
         assert "ManaPool" in repr_str
         assert "W" in repr_str
         assert "U" in repr_str
+
+    def test_spend_zero_amount_raises(self) -> None:
+        """Test spending zero amount raises ValueError."""
+        pool = ManaPool()
+        pool.add("W", 3)
+        with pytest.raises(ValueError, match="Amount must be at least 1"):
+            pool.spend("W", 0)
+
+    def test_spend_negative_amount_raises(self) -> None:
+        """Test spending negative amount raises ValueError."""
+        pool = ManaPool()
+        pool.add("W", 3)
+        with pytest.raises(ValueError, match="Amount must be at least 1"):
+            pool.spend("W", -1)
+
+    def test_available_invalid_color_raises(self) -> None:
+        """Test available with invalid color raises ValueError."""
+        pool = ManaPool()
+        with pytest.raises(ValueError, match="Invalid mana color"):
+            pool.available("X")
+
+    def test_spend_invalid_color_raises(self) -> None:
+        """Test spend with invalid color raises ValueError."""
+        pool = ManaPool()
+        with pytest.raises(ValueError, match="Invalid mana color"):
+            pool.spend("X", 1)
