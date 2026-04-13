@@ -40,7 +40,8 @@ def temp_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             oracle_id TEXT NOT NULL REFERENCES cards(oracle_id),
             published_at TEXT NOT NULL,
-            comment TEXT NOT NULL
+            comment TEXT NOT NULL,
+            UNIQUE(oracle_id, published_at, comment)
         )
     """)
     
@@ -120,7 +121,10 @@ def temp_db():
     
     for card in test_cards:
         cursor.execute("""
-            INSERT INTO cards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO cards
+                (oracle_id, name, mana_cost, type_line, oracle_text,
+                 colors, color_identity, keywords, power, toughness, loyalty, layout)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             card["oracle_id"],
             card["name"],
@@ -358,6 +362,20 @@ def test_search_empty_query(temp_db):
         results = repo.search("")
         
         assert len(results) == 5  # All test cards
+
+
+def test_search_wildcard_not_treated_as_sql(temp_db):
+    """Test that SQL wildcards in search query are treated as literals."""
+    with CardRepository(temp_db) as repo:
+        # '_' should match literally (underscore character), not as SQL wildcard
+        results = repo.search("_")
+        
+        # None of our test cards have underscore in name or text
+        assert len(results) == 0
+        
+        # '%' should also be treated literally
+        results_percent = repo.search("%")
+        assert len(results_percent) == 0
 
 
 def test_repository_with_path_object(temp_db):

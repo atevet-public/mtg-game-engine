@@ -1,3 +1,5 @@
+"""SQLite-backed read-only repository for CardDefinition lookups."""
+
 import sqlite3
 import json
 from pathlib import Path
@@ -8,11 +10,13 @@ from mtgengine.card_definition import CardDefinition
 
 class CardRepository:
     def __init__(self, db_path: str | Path):
+        """Initialize repository with a SQLite database path."""
         self.db_path = str(db_path)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
 
     def get_by_oracle_id(self, oracle_id: str) -> CardDefinition | None:
+        """Retrieve a card by its unique oracle ID."""
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM cards WHERE oracle_id = ?", (oracle_id,))
         row = cursor.fetchone()
@@ -23,6 +27,7 @@ class CardRepository:
         return self._row_to_card_definition(row)
 
     def get_by_name(self, name: str) -> CardDefinition | None:
+        """Retrieve a card by its exact name (case-insensitive)."""
         cursor = self.conn.cursor()
         cursor.execute(
             "SELECT * FROM cards WHERE LOWER(name) = LOWER(?)",
@@ -36,21 +41,22 @@ class CardRepository:
         return self._row_to_card_definition(row)
 
     def search(self, query: str) -> list[CardDefinition]:
+        """Search cards by name or oracle text (case-insensitive)."""
+        escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        search_pattern = f"%{escaped}%"
         cursor = self.conn.cursor()
-        search_pattern = f"%{query}%"
         cursor.execute(
             """
-            SELECT * FROM cards 
-            WHERE LOWER(name) LIKE LOWER(?) 
-               OR LOWER(oracle_text) LIKE LOWER(?)
+            SELECT * FROM cards
+            WHERE LOWER(name) LIKE LOWER(?) ESCAPE '\\'
+               OR LOWER(oracle_text) LIKE LOWER(?) ESCAPE '\\'
             """,
-            (search_pattern, search_pattern)
+            (search_pattern, search_pattern),
         )
-        rows = cursor.fetchall()
-        
-        return [self._row_to_card_definition(row) for row in rows]
+        return [self._row_to_card_definition(row) for row in cursor.fetchall()]
 
     def close(self):
+        """Close the database connection."""
         if self.conn:
             self.conn.close()
 

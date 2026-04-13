@@ -1,7 +1,9 @@
+"""Immutable data container for a Magic: The Gathering card oracle definition."""
+
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class CardDefinition:
     oracle_id: str
     name: str

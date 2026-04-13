@@ -13,13 +13,15 @@ import sys
 from pathlib import Path
 from urllib.request import urlopen
 
+NETWORK_TIMEOUT_SECONDS = 60
+
 
 def get_bulk_data_info():
     """Fetch the bulk data manifest from Scryfall."""
     print("Fetching bulk data info from Scryfall...")
     url = "https://api.scryfall.com/bulk-data"
     
-    with urlopen(url) as response:
+    with urlopen(url, timeout=NETWORK_TIMEOUT_SECONDS) as response:
         data = json.loads(response.read().decode("utf-8"))
     
     oracle_cards_info = None
@@ -44,7 +46,7 @@ def download_json_data(url, description):
     print(f"Downloading {description}...")
     print(f"  URL: {url}")
     
-    with urlopen(url) as response:
+    with urlopen(url, timeout=NETWORK_TIMEOUT_SECONDS) as response:
         data = json.loads(response.read().decode("utf-8"))
     
     print(f"  Downloaded {len(data)} items")
@@ -82,7 +84,8 @@ def create_database(db_path):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             oracle_id TEXT NOT NULL REFERENCES cards(oracle_id),
             published_at TEXT NOT NULL,
-            comment TEXT NOT NULL
+            comment TEXT NOT NULL,
+            UNIQUE(oracle_id, published_at, comment)
         )
     """)
     
@@ -127,7 +130,9 @@ def filter_and_insert_cards(conn, cards_data):
         
         try:
             cursor.execute("""
-                INSERT OR REPLACE INTO cards 
+                INSERT OR REPLACE INTO cards
+                    (oracle_id, name, mana_cost, type_line, oracle_text,
+                     colors, color_identity, keywords, power, toughness, loyalty, layout)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 oracle_id,
@@ -177,7 +182,7 @@ def insert_rulings(conn, rulings_data):
         
         try:
             cursor.execute("""
-                INSERT INTO rulings (oracle_id, published_at, comment)
+                INSERT OR IGNORE INTO rulings (oracle_id, published_at, comment)
                 VALUES (?, ?, ?)
             """, (oracle_id, published_at, comment))
             inserted += 1
