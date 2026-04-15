@@ -16,6 +16,13 @@ from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
 from mtgengine.zone.stack import Stack
+from mtgengine.abilities import (
+    Ability,
+    ActivatedAbility,
+    TriggeredAbility,
+    StaticAbility,
+    KeywordAbility,
+)
 
 __all__ = [
     "Card",
@@ -34,4 +41,9 @@ __all__ = [
     "Deck",
     "Player",
     "Game",
+    "Ability",
+    "ActivatedAbility",
+    "TriggeredAbility",
+    "StaticAbility",
+    "KeywordAbility",
 ]
