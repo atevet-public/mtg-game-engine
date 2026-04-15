@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Callable, Any
 
 from mtgengine.abilities.cost import Cost
 from mtgengine.abilities.effect import Effect, ContinuousEffect

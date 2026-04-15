@@ -107,7 +107,7 @@ class TestSacrificeCost:
     def test_sacrifice_cost_description_default(self) -> None:
         """Test SacrificeCost description with default text."""
         cost = SacrificeCost()
-        assert cost.description() == "Sacrifice sacrifice this permanent"
+        assert cost.description() == "Sacrifice this permanent"
 
     def test_sacrifice_cost_description_custom(self) -> None:
         """Test SacrificeCost description with custom text."""

@@ -190,6 +190,19 @@ class TestCreateTokenEffect:
         effect = CreateTokenEffect(3, 1, 1, "Goblin", ["R"])
         assert effect.description() == "Create 3 1/1 Goblin tokens"
 
+    def test_create_token_zero_count_raises(self) -> None:
+        with pytest.raises(ValueError, match="count must be at least 1"):
+            CreateTokenEffect(0, 1, 1, "Zombie", [])
+
+    def test_create_token_negative_toughness_raises(self) -> None:
+        with pytest.raises(ValueError):
+            CreateTokenEffect(1, 1, -1, "Zombie", [])
+
+    def test_create_token_negative_power_allowed(self) -> None:
+        # -1/1 tokens are valid in MTG (negative power, positive toughness)
+        effect = CreateTokenEffect(1, -1, 1, "Horror", ["B"])
+        assert effect.power == -1
+
 
 class TestDealDamageEffect:
     """Test suite for the DealDamageEffect class."""

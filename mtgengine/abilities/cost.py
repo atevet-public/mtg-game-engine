@@ -67,7 +67,7 @@ class TapCost(Cost):
 class SacrificeCost(Cost):
     """Sacrifice the source permanent (or a permanent matching a filter)."""
 
-    def __init__(self, description_text: str = "sacrifice this permanent") -> None:
+    def __init__(self, description_text: str = "this permanent") -> None:
         self._description_text = description_text
 
     def description(self) -> str:
@@ -122,5 +122,9 @@ class CompoundCost(Cost):
             raise ValueError(
                 "Cannot pay compound cost: one or more costs cannot be paid"
             )
+        # NOTE(Phase 4): This pay() loop is not transactional. If a sub-cost's
+        # pay() raises after earlier costs have already mutated state, those
+        # mutations are not rolled back. Before Phase 5 (casting/cost payment),
+        # this must be made atomic (e.g., snapshot/restore or two-phase commit).
         for cost in self.costs:
             cost.pay(source, controller)

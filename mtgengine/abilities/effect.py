@@ -168,6 +168,11 @@ class CreateTokenEffect(Effect):
     def __init__(
         self, count: int, power: int, toughness: int, name: str, colors: list[str]
     ) -> None:
+        if count < 1:
+            raise ValueError("count must be at least 1")
+        if toughness < 0:
+            raise ValueError("toughness cannot be negative")
+        # Note: power CAN be negative (e.g., -1/-1 tokens exist in MTG)
         self.count = count
         self.power = power
         self.toughness = toughness
