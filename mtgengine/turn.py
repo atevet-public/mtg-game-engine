@@ -1,3 +1,5 @@
+"""Turn structure, phases, steps, and events for MTG."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

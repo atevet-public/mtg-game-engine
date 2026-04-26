@@ -18,21 +18,22 @@ abstractions. Key modules:
 
 - `game.py` — top-level game state
 - `player.py` — player state
-- `zone/` — all zone types (battlefield, hand, library, graveyard, exile, stack)
-- `permanent.py` — battlefield objects
-- `stack_object.py` — spells and abilities on the stack
-- `mana_pool.py` — per-player mana tracking
-- `card_definition.py`, `card_repository.py` — card data layer
-- `abilities/` — ability, cost, effect hierarchies; keyword abilities
-- `turn.py` — turn/phase/step structure
+- `card.py` — card data model
+- `mana_cost.py` — mana cost representation
+- `turn.py` — turn/phase/step structure and events
+- `zone/` — all zone types (battlefield, deck, hand, graveyard, exile, stack)
+
+The architecture is being extended with additional modules (spells, permanents,
+abilities, effects) currently in development.
 
 ## Python Conventions
 
 - **Dataclasses:** Use `frozen=True` unless the object requires mutation.
 - **Docstrings:** All modules have a module-level docstring. Classes and public
   methods use Google-style docstrings.
-- **Circular imports:** Use `from __future__ import annotations` at the top of
-  each file, and guard cross-module type-only imports with `TYPE_CHECKING`.
+- **Circular imports:** Where forward references are needed, use
+  `from __future__ import annotations` and guard type-only cross-module imports
+  with `TYPE_CHECKING`.
 - **Typing:** Use Python type annotations throughout. No untyped public APIs.
 - **Comments:** Only comment code that needs clarification. Do not add
   redundant or obvious comments.
