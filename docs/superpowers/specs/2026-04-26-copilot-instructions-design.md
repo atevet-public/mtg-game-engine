@@ -40,6 +40,7 @@ When in doubt about how a game mechanic should behave, consult the comprehensive
 - **Circular imports:** Use `from __future__ import annotations` at the top of each file, and guard cross-module type-only imports with `TYPE_CHECKING`.
 - **Typing:** Use Python type annotations throughout. No untyped public APIs.
 - **Comments:** Only comment code that needs clarification. Do not add redundant or obvious comments.
+- **Clean Code:** Follow basic Clean Code principles — use descriptive names, keep functions short (approximately 4 lines), and each function should do one thing.
 
 ### 4. Testing Discipline
 
@@ -67,6 +68,7 @@ All new code requires tests. PRs should not reduce coverage. Run the full test s
 - Open a PR; CI must pass (Quality Checks workflow)
 - Squash merge into `main`
 - No direct commits to `main`
+- PRs should be small and focused — one feature or rule per PR when reasonable. For example, when implementing keyword abilities, open one PR per ability rather than one PR for all abilities.
 
 ## File Location
 
