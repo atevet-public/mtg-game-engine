@@ -47,16 +47,16 @@ class TestCard:
     def test_card_tap_sets_tapped_flag(self) -> None:
         """Calling tap should mark the card as tapped."""
         card = Card("Grizzly Bears", card_type="Creature")
-        assert card.tapped is False
+        assert card.is_tapped is False
 
         card.tap()
-        assert card.tapped is True
+        assert card.is_tapped is True
 
     def test_card_untap_clears_tapped_flag(self) -> None:
         """Calling untap should clear the tapped state."""
         card = Card("Llanowar Elves", card_type="Creature")
         card.tap()
-        assert card.tapped is True
+        assert card.is_tapped is True
 
         card.untap()
-        assert card.tapped is False
+        assert card.is_tapped is False

@@ -30,3 +30,6 @@ build/
 .DS_Store
 Thumbs.db
 .worktrees/
+
+# Card database
+cards.db

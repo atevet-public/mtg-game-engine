@@ -88,3 +88,20 @@ class ManaCost:
             + self.colorless
             + self.generic
         )
+
+    def __str__(self) -> str:
+        """Return string representation in mana notation format.
+
+        Returns:
+            Mana cost string (e.g., "2WUB" for 2 generic, 1 white, 1 blue, 1 black).
+        """
+        result = ""
+        if self.generic > 0:
+            result += str(self.generic)
+        result += "W" * self.white
+        result += "U" * self.blue
+        result += "B" * self.black
+        result += "R" * self.red
+        result += "G" * self.green
+        result += "C" * self.colorless
+        return result if result else "0"

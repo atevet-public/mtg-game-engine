@@ -105,3 +105,18 @@ class TestManaCost:
         cost = ManaCost(white=1)
         with pytest.raises(AttributeError):
             cost.white = 2  # type: ignore
+
+    def test_str_empty_is_zero(self) -> None:
+        assert str(ManaCost()) == "0"
+
+    def test_str_generic_only(self) -> None:
+        assert str(ManaCost.from_notation("5")) == "5"
+
+    def test_str_color_ordering(self) -> None:
+        assert str(ManaCost.from_notation("2WUB")) == "2WUB"
+
+    def test_str_colorless(self) -> None:
+        assert str(ManaCost.from_notation("CC")) == "CC"
+
+    def test_str_single_color(self) -> None:
+        assert str(ManaCost.from_notation("W")) == "W"

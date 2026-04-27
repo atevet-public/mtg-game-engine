@@ -5,6 +5,7 @@ description = "A Magic: The Gathering game engine"
 requires-python = ">=3.11"
 dependencies = [
     "pyventus>=0.7.2",
+    "more-itertools>=11.0.2",
 ]
 
 [project.optional-dependencies]
