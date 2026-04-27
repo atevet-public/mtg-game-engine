@@ -19,6 +19,9 @@ class CardDefinition:
     layout: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "colors", tuple(self.colors))
-        object.__setattr__(self, "color_identity", tuple(self.color_identity))
-        object.__setattr__(self, "keywords", tuple(self.keywords))
+        if not isinstance(self.colors, tuple):
+            object.__setattr__(self, "colors", tuple(self.colors))
+        if not isinstance(self.color_identity, tuple):
+            object.__setattr__(self, "color_identity", tuple(self.color_identity))
+        if not isinstance(self.keywords, tuple):
+            object.__setattr__(self, "keywords", tuple(self.keywords))
