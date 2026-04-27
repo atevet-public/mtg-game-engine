@@ -8,32 +8,14 @@ from mtgengine.abilities.effect import (
     LoseLifeEffect,
     AddManaEffect,
     PutCounterEffect,
-    CreateTokenEffect,
+    CreateCreatureTokenEffect,
     DealDamageEffect,
 )
 from mtgengine.player import Player
 from mtgengine.permanent import Permanent
-from mtgengine.card_definition import CardDefinition
 from mtgengine.game import Game
 from mtgengine.card import Card
-
-
-def make_card_def(name: str = "Test") -> CardDefinition:
-    """Helper to create a simple CardDefinition for testing."""
-    return CardDefinition(
-        oracle_id="test-id",
-        name=name,
-        mana_cost="{0}",
-        type_line="Artifact",
-        oracle_text=None,
-        colors=[],
-        color_identity=[],
-        keywords=[],
-        power=None,
-        toughness=None,
-        loyalty=None,
-        layout="normal",
-    )
+from mtgengine.tests.conftest import make_card_def
 
 
 class TestDrawCardsEffect:
@@ -134,11 +116,11 @@ class TestAddManaEffect:
         with pytest.raises(ValueError, match="Invalid mana color"):
             AddManaEffect("X", 1)
 
-    def test_add_mana_effect_accepts_valid_colors(self) -> None:
+    @pytest.mark.parametrize("color", ["W", "U", "B", "R", "G", "C", "generic"])
+    def test_add_mana_effect_accepts_valid_colors(self, color: str) -> None:
         """Test AddManaEffect accepts all valid mana colors."""
-        for color in ["W", "U", "B", "R", "G", "C", "generic"]:
-            effect = AddManaEffect(color, 1)
-            assert effect.color == color
+        effect = AddManaEffect(color, 1)
+        assert effect.color == color
 
     def test_add_mana_effect_raises_on_invalid_amount(self) -> None:
         """Test AddManaEffect raises ValueError for amount < 1."""
@@ -177,30 +159,30 @@ class TestPutCounterEffect:
             PutCounterEffect("+1/+1", 0)
 
 
-class TestCreateTokenEffect:
-    """Test suite for the CreateTokenEffect class."""
+class TestCreateCreatureTokenEffect:
+    """Test suite for the CreateCreatureTokenEffect class."""
 
     def test_create_token_effect_description_single(self) -> None:
         """Test description for 1 token."""
-        effect = CreateTokenEffect(1, 2, 2, "Zombie", ["B"])
+        effect = CreateCreatureTokenEffect(1, 2, 2, "Zombie", ["B"])
         assert effect.description() == "Create 1 2/2 Zombie token"
 
     def test_create_token_effect_description_multiple(self) -> None:
         """Test description for multiple tokens."""
-        effect = CreateTokenEffect(3, 1, 1, "Goblin", ["R"])
+        effect = CreateCreatureTokenEffect(3, 1, 1, "Goblin", ["R"])
         assert effect.description() == "Create 3 1/1 Goblin tokens"
 
     def test_create_token_zero_count_raises(self) -> None:
         with pytest.raises(ValueError, match="count must be at least 1"):
-            CreateTokenEffect(0, 1, 1, "Zombie", [])
+            CreateCreatureTokenEffect(0, 1, 1, "Zombie", [])
 
     def test_create_token_negative_toughness_raises(self) -> None:
         with pytest.raises(ValueError):
-            CreateTokenEffect(1, 1, -1, "Zombie", [])
+            CreateCreatureTokenEffect(1, 1, -1, "Zombie", [])
 
     def test_create_token_negative_power_allowed(self) -> None:
         # -1/1 tokens are valid in MTG (negative power, positive toughness)
-        effect = CreateTokenEffect(1, -1, 1, "Horror", ["B"])
+        effect = CreateCreatureTokenEffect(1, -1, 1, "Horror", ["B"])
         assert effect.power == -1
 
 

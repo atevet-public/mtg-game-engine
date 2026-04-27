@@ -1,5 +1,7 @@
 """Mana pool for tracking floating mana."""
 
+from collections import defaultdict
+
 MANA_COLORS = frozenset({"W", "U", "B", "R", "G", "C"})
 
 
@@ -8,7 +10,7 @@ class ManaPool:
 
     def __init__(self) -> None:
         """Initialize an empty mana pool."""
-        self._mana: dict[str, int] = {}
+        self._mana: defaultdict[str, int] = defaultdict(int)
 
     def add(self, color: str, amount: int = 1) -> None:
         """Add mana of the given color. Color must be W/U/B/R/G/C or 'generic'.
@@ -24,7 +26,7 @@ class ManaPool:
             raise ValueError(f"Invalid mana color: {color}")
         if amount < 1:
             raise ValueError("Amount must be at least 1")
-        self._mana[color] = self._mana.get(color, 0) + amount
+        self._mana[color] += amount
 
     def available(self, color: str) -> int:
         """Return available mana of the given color.

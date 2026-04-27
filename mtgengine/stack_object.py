@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from mtgengine.card_definition import CardDefinition
+    from mtgengine.abilities.ability import Ability
     from mtgengine.player import Player
 
 
@@ -14,6 +15,6 @@ if TYPE_CHECKING:
 class StackObject:
     """Represents a spell or ability on the stack waiting to resolve."""
 
-    source: CardDefinition
+    source: CardDefinition | Ability
     controller: Player
     targets: list[Any] = field(default_factory=list)

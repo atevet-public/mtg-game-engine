@@ -26,7 +26,7 @@ from mtgengine.abilities.effect import (
     DestroyEffect,
     ExileEffect,
     CounterSpellEffect,
-    CreateTokenEffect,
+    CreateCreatureTokenEffect,
     PutCounterEffect,
 )
 
@@ -52,6 +52,6 @@ __all__ = [
     "DestroyEffect",
     "ExileEffect",
     "CounterSpellEffect",
-    "CreateTokenEffect",
+    "CreateCreatureTokenEffect",
     "PutCounterEffect",
 ]

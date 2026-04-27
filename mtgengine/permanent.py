@@ -28,8 +28,8 @@ class Permanent:
         self.definition = definition
         self.owner = owner
         self.controller = controller
-        self.tapped: bool = False
-        self.summoning_sick: bool = True
+        self.is_tapped: bool = False
+        self.is_summoning_sick: bool = True
         self.counters: dict[str, int] = {}
         self.attached_to: Permanent | None = None
         self.attachments: list[Permanent] = []
@@ -40,13 +40,13 @@ class Permanent:
         Raises:
             ValueError: If permanent is already tapped.
         """
-        if self.tapped:
+        if self.is_tapped:
             raise ValueError(f"{self.definition.name} is already tapped")
-        self.tapped = True
+        self.is_tapped = True
 
     def untap(self) -> None:
         """Untap this permanent."""
-        self.tapped = False
+        self.is_tapped = False
 
     def add_counter(self, counter_type: str, amount: int = 1) -> None:
         """Add counters of the given type.
@@ -54,7 +54,12 @@ class Permanent:
         Args:
             counter_type: Type of counter (e.g., "+1/+1", "loyalty").
             amount: Number of counters to add (default: 1).
+
+        Raises:
+            ValueError: If amount is less than 1.
         """
+        if amount < 1:
+            raise ValueError("amount must be at least 1")
         self.counters[counter_type] = self.counters.get(counter_type, 0) + amount
 
     def remove_counter(self, counter_type: str, amount: int = 1) -> None:
@@ -63,7 +68,12 @@ class Permanent:
         Args:
             counter_type: Type of counter to remove.
             amount: Number of counters to remove (default: 1).
+
+        Raises:
+            ValueError: If amount is less than 1.
         """
+        if amount < 1:
+            raise ValueError("amount must be at least 1")
         current = self.counters.get(counter_type, 0)
         new_value = max(0, current - amount)
         if new_value == 0:

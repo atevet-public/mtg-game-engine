@@ -175,8 +175,8 @@ def test_card_definition_creation():
     assert card.oracle_id == "test-id"
     assert card.name == "Test Card"
     assert card.mana_cost == "{2}{U}"
-    assert card.colors == ["U"]
-    assert card.keywords == ["Flash"]
+    assert card.colors == ("U",)
+    assert card.keywords == ("Flash",)
 
 
 def test_card_definition_with_nullable_fields():
@@ -245,8 +245,8 @@ def test_get_by_oracle_id(temp_db):
         assert card.name == "Lightning Bolt"
         assert card.mana_cost == "{R}"
         assert card.type_line == "Instant"
-        assert card.colors == ["R"]
-        assert card.keywords == []
+        assert card.colors == ("R",)
+        assert card.keywords == ()
 
 
 def test_get_by_oracle_id_not_found(temp_db):
@@ -266,7 +266,7 @@ def test_get_by_name(temp_db):
         assert card.name == "Serra Angel"
         assert card.power == "4"
         assert card.toughness == "4"
-        assert card.keywords == ["Flying", "Vigilance"]
+        assert card.keywords == ("Flying", "Vigilance")
 
 
 def test_get_by_name_case_insensitive(temp_db):

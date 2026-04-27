@@ -10,10 +10,15 @@ class CardDefinition:
     mana_cost: str | None
     type_line: str
     oracle_text: str | None
-    colors: list[str]
-    color_identity: list[str]
-    keywords: list[str]
+    colors: tuple[str, ...]
+    color_identity: tuple[str, ...]
+    keywords: tuple[str, ...]
     power: str | None
     toughness: str | None
     loyalty: int | None
     layout: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "colors", tuple(self.colors))
+        object.__setattr__(self, "color_identity", tuple(self.color_identity))
+        object.__setattr__(self, "keywords", tuple(self.keywords))

@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from urllib.request import urlopen
 
+from more_itertools import partition
+
 NETWORK_TIMEOUT_SECONDS = 60
 
 
@@ -58,12 +60,14 @@ def create_database(db_path):
     print(f"Creating database at {db_path}...")
     
     conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
     cursor = conn.cursor()
     
     # Create cards table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cards (
-            oracle_id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            oracle_id TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
             mana_cost TEXT,
             type_line TEXT NOT NULL,
@@ -82,10 +86,10 @@ def create_database(db_path):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS rulings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            oracle_id TEXT NOT NULL REFERENCES cards(oracle_id),
+            card_id INTEGER NOT NULL REFERENCES cards(id),
             published_at TEXT NOT NULL,
             comment TEXT NOT NULL,
-            UNIQUE(oracle_id, published_at, comment)
+            UNIQUE(card_id, published_at, comment)
         )
     """)
     
@@ -99,15 +103,13 @@ def filter_and_insert_cards(conn, cards_data):
     
     cursor = conn.cursor()
     inserted = 0
-    skipped = 0
-    
-    for card in cards_data:
-        # Skip cards without oracle_id (shouldn't happen, but be safe)
-        if "oracle_id" not in card:
-            skipped += 1
-            continue
-        
-        # Extract relevant fields
+
+    without_oracle_id, with_oracle_id = partition(
+        lambda card: "oracle_id" in card, cards_data
+    )
+    skipped = sum(1 for _ in without_oracle_id)
+
+    for card in with_oracle_id:
         oracle_id = card["oracle_id"]
         name = card.get("name", "")
         mana_cost = card.get("mana_cost")
@@ -121,7 +123,6 @@ def filter_and_insert_cards(conn, cards_data):
         loyalty = card.get("loyalty")
         layout = card.get("layout", "normal")
         
-        # Convert loyalty to integer if present
         if loyalty is not None:
             try:
                 loyalty = int(loyalty)
@@ -130,10 +131,22 @@ def filter_and_insert_cards(conn, cards_data):
         
         try:
             cursor.execute("""
-                INSERT OR REPLACE INTO cards
+                INSERT INTO cards
                     (oracle_id, name, mana_cost, type_line, oracle_text,
                      colors, color_identity, keywords, power, toughness, loyalty, layout)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(oracle_id) DO UPDATE SET
+                    name = excluded.name,
+                    mana_cost = excluded.mana_cost,
+                    type_line = excluded.type_line,
+                    oracle_text = excluded.oracle_text,
+                    colors = excluded.colors,
+                    color_identity = excluded.color_identity,
+                    keywords = excluded.keywords,
+                    power = excluded.power,
+                    toughness = excluded.toughness,
+                    loyalty = excluded.loyalty,
+                    layout = excluded.layout
             """, (
                 oracle_id,
                 name,
@@ -180,16 +193,27 @@ def insert_rulings(conn, rulings_data):
             skipped += 1
             continue
         
+        cursor.execute("SELECT id FROM cards WHERE oracle_id = ?", (oracle_id,))
+        row = cursor.fetchone()
+        if not row:
+            skipped += 1
+            continue
+        card_id = row[0]
+        
         try:
             cursor.execute("""
-                INSERT OR IGNORE INTO rulings (oracle_id, published_at, comment)
+                INSERT OR IGNORE INTO rulings (card_id, published_at, comment)
                 VALUES (?, ?, ?)
-            """, (oracle_id, published_at, comment))
-            inserted += 1
+            """, (card_id, published_at, comment))
             
-            if inserted % 5000 == 0:
-                print(f"  Inserted {inserted} rulings...")
-                conn.commit()
+            if cursor.rowcount == 1:
+                inserted += 1
+                
+                if inserted % 5000 == 0:
+                    print(f"  Inserted {inserted} rulings...")
+                    conn.commit()
+            else:
+                skipped += 1
         
         except sqlite3.Error as e:
             print(f"  Error inserting ruling for {oracle_id}: {e}")
@@ -200,7 +224,8 @@ def insert_rulings(conn, rulings_data):
     return inserted, skipped
 
 
-def main():
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Import Scryfall card data into SQLite database"
     )
@@ -209,15 +234,32 @@ def main():
         default="cards.db",
         help="Path to SQLite database file (default: cards.db)"
     )
-    args = parser.parse_args()
-    
+    return parser.parse_args()
+
+
+def print_summary(
+    db_path: Path,
+    cards_inserted: int,
+    cards_skipped: int,
+    rulings_inserted: int,
+    rulings_skipped: int,
+) -> None:
+    """Print final import summary."""
+    print("\n" + "="*60)
+    print("Import complete!")
+    print(f"Database: {db_path.absolute()}")
+    print(f"Cards: {cards_inserted} inserted, {cards_skipped} skipped")
+    print(f"Rulings: {rulings_inserted} inserted, {rulings_skipped} skipped")
+    print("="*60)
+
+
+def main():
+    args = parse_args()
     db_path = Path(args.db)
     
     try:
-        # Get bulk data URLs
         oracle_cards_info, rulings_info = get_bulk_data_info()
         
-        # Download data
         cards_data = download_json_data(
             oracle_cards_info["download_uri"],
             "Oracle Cards"
@@ -227,21 +269,14 @@ def main():
             "Rulings"
         )
         
-        # Create database
         conn = create_database(db_path)
         
-        # Insert data
         cards_inserted, cards_skipped = filter_and_insert_cards(conn, cards_data)
         rulings_inserted, rulings_skipped = insert_rulings(conn, rulings_data)
         
         conn.close()
         
-        print("\n" + "="*60)
-        print("Import complete!")
-        print(f"Database: {db_path.absolute()}")
-        print(f"Cards: {cards_inserted} inserted, {cards_skipped} skipped")
-        print(f"Rulings: {rulings_inserted} inserted, {rulings_skipped} skipped")
-        print("="*60)
+        print_summary(db_path, cards_inserted, cards_skipped, rulings_inserted, rulings_skipped)
         
     except Exception as e:
         print(f"\nError: {e}", file=sys.stderr)

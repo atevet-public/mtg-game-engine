@@ -54,7 +54,7 @@ class TapCost(Cost):
         return "{T}"
 
     def can_pay(self, source: Permanent, controller: Player) -> bool:
-        return not source.tapped and not source.summoning_sick
+        return not source.is_tapped and not source.is_summoning_sick
 
     def pay(self, source: Permanent, controller: Player) -> None:
         if not self.can_pay(source, controller):
@@ -67,11 +67,11 @@ class TapCost(Cost):
 class SacrificeCost(Cost):
     """Sacrifice the source permanent (or a permanent matching a filter)."""
 
-    def __init__(self, description_text: str = "this permanent") -> None:
+    def __init__(self, description_text: str) -> None:
         self._description_text = description_text
 
     def description(self) -> str:
-        return f"Sacrifice {self._description_text}"
+        return self._description_text
 
     def can_pay(self, source: Permanent, controller: Player) -> bool:
         # Source is always sacrificeable as long as it's on the battlefield under your control

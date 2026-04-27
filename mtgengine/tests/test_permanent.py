@@ -18,9 +18,9 @@ class TestPermanent:
             mana_cost="{R}",
             type_line="Instant",
             oracle_text="Deal 3 damage to any target.",
-            colors=["R"],
-            color_identity=["R"],
-            keywords=[],
+            colors=("R",),
+            color_identity=("R",),
+            keywords=(),
             power=None,
             toughness=None,
             loyalty=None,
@@ -34,8 +34,8 @@ class TestPermanent:
         assert permanent.definition is definition
         assert permanent.owner is owner
         assert permanent.controller is controller
-        assert permanent.tapped is False
-        assert permanent.summoning_sick is True
+        assert permanent.is_tapped is False
+        assert permanent.is_summoning_sick is True
         assert permanent.counters == {}
         assert permanent.attached_to is None
         assert permanent.attachments == []
@@ -48,9 +48,9 @@ class TestPermanent:
             mana_cost="{1}{G}",
             type_line="Creature — Bear",
             oracle_text=None,
-            colors=["G"],
-            color_identity=["G"],
-            keywords=[],
+            colors=("G",),
+            color_identity=("G",),
+            keywords=(),
             power="2",
             toughness="2",
             loyalty=None,
@@ -60,7 +60,7 @@ class TestPermanent:
         permanent = Permanent(definition, owner, owner)
 
         permanent.tap()
-        assert permanent.tapped is True
+        assert permanent.is_tapped is True
 
     def test_tap_already_tapped_raises(self) -> None:
         """Test tapping an already tapped permanent raises ValueError."""
@@ -70,9 +70,9 @@ class TestPermanent:
             mana_cost="{1}{G}",
             type_line="Creature — Bear",
             oracle_text=None,
-            colors=["G"],
-            color_identity=["G"],
-            keywords=[],
+            colors=("G",),
+            color_identity=("G",),
+            keywords=(),
             power="2",
             toughness="2",
             loyalty=None,
@@ -93,9 +93,9 @@ class TestPermanent:
             mana_cost=None,
             type_line="Basic Land — Forest",
             oracle_text="{T}: Add {G}.",
-            colors=[],
-            color_identity=["G"],
-            keywords=[],
+            colors=(),
+            color_identity=("G",),
+            keywords=(),
             power=None,
             toughness=None,
             loyalty=None,
@@ -105,10 +105,10 @@ class TestPermanent:
         permanent = Permanent(definition, owner, owner)
 
         permanent.tap()
-        assert permanent.tapped is True
+        assert permanent.is_tapped is True
 
         permanent.untap()
-        assert permanent.tapped is False
+        assert permanent.is_tapped is False
 
     def test_untap_already_untapped(self) -> None:
         """Test untapping an already untapped permanent (no error)."""
@@ -118,9 +118,9 @@ class TestPermanent:
             mana_cost=None,
             type_line="Basic Land — Island",
             oracle_text="{T}: Add {U}.",
-            colors=[],
-            color_identity=["U"],
-            keywords=[],
+            colors=(),
+            color_identity=("U",),
+            keywords=(),
             power=None,
             toughness=None,
             loyalty=None,
@@ -130,7 +130,7 @@ class TestPermanent:
         permanent = Permanent(definition, owner, owner)
 
         permanent.untap()  # Should not raise
-        assert permanent.tapped is False
+        assert permanent.is_tapped is False
 
     def test_add_counter(self) -> None:
         """Test adding counters to a permanent."""
@@ -140,9 +140,9 @@ class TestPermanent:
             mana_cost="{X}{X}",
             type_line="Artifact Creature — Construct",
             oracle_text="Walking Ballista enters with X +1/+1 counters on it.",
-            colors=[],
-            color_identity=[],
-            keywords=[],
+            colors=(),
+            color_identity=(),
+            keywords=(),
             power="0",
             toughness="0",
             loyalty=None,
@@ -165,9 +165,9 @@ class TestPermanent:
             mana_cost="{3}{G}{W}",
             type_line="Legendary Planeswalker — Ajani",
             oracle_text="+1: Distribute three +1/+1 counters among one, two, or three target creatures you control.",
-            colors=["G", "W"],
-            color_identity=["G", "W"],
-            keywords=[],
+            colors=("G", "W"),
+            color_identity=("G", "W"),
+            keywords=(),
             power=None,
             toughness=None,
             loyalty=4,
@@ -187,9 +187,9 @@ class TestPermanent:
             mana_cost="{1}{G}{G}",
             type_line="Creature — Spike",
             oracle_text="Spike Feeder enters with two +1/+1 counters on it.",
-            colors=["G"],
-            color_identity=["G"],
-            keywords=[],
+            colors=("G",),
+            color_identity=("G",),
+            keywords=(),
             power="0",
             toughness="0",
             loyalty=None,
@@ -210,9 +210,9 @@ class TestPermanent:
             mana_cost="{2}",
             type_line="Creature",
             oracle_text=None,
-            colors=[],
-            color_identity=[],
-            keywords=[],
+            colors=(),
+            color_identity=(),
+            keywords=(),
             power="1",
             toughness="1",
             loyalty=None,
@@ -234,9 +234,9 @@ class TestPermanent:
             mana_cost="{2}",
             type_line="Creature",
             oracle_text=None,
-            colors=[],
-            color_identity=[],
-            keywords=[],
+            colors=(),
+            color_identity=(),
+            keywords=(),
             power="1",
             toughness="1",
             loyalty=None,
@@ -257,9 +257,9 @@ class TestPermanent:
             mana_cost="{2}",
             type_line="Creature",
             oracle_text=None,
-            colors=[],
-            color_identity=[],
-            keywords=[],
+            colors=(),
+            color_identity=(),
+            keywords=(),
             power="1",
             toughness="1",
             loyalty=None,
@@ -278,9 +278,9 @@ class TestPermanent:
             mana_cost="{1}{W}",
             type_line="Enchantment — Aura",
             oracle_text="Enchanted creature can't attack or block.",
-            colors=["W"],
-            color_identity=["W"],
-            keywords=[],
+            colors=("W",),
+            color_identity=("W",),
+            keywords=(),
             power=None,
             toughness=None,
             loyalty=None,
@@ -292,9 +292,9 @@ class TestPermanent:
             mana_cost="{1}{G}",
             type_line="Creature — Bear",
             oracle_text=None,
-            colors=["G"],
-            color_identity=["G"],
-            keywords=[],
+            colors=("G",),
+            color_identity=("G",),
+            keywords=(),
             power="2",
             toughness="2",
             loyalty=None,
@@ -315,9 +315,9 @@ class TestPermanent:
             mana_cost="{1}{W}",
             type_line="Enchantment — Aura",
             oracle_text="Enchanted creature can't attack or block.",
-            colors=["W"],
-            color_identity=["W"],
-            keywords=[],
+            colors=("W",),
+            color_identity=("W",),
+            keywords=(),
             power=None,
             toughness=None,
             loyalty=None,
@@ -329,9 +329,9 @@ class TestPermanent:
             mana_cost="{1}{G}",
             type_line="Creature — Bear",
             oracle_text=None,
-            colors=["G"],
-            color_identity=["G"],
-            keywords=[],
+            colors=("G",),
+            color_identity=("G",),
+            keywords=(),
             power="2",
             toughness="2",
             loyalty=None,
@@ -344,3 +344,53 @@ class TestPermanent:
         creature.attachments.append(aura)
         assert len(creature.attachments) == 1
         assert creature.attachments[0] is aura
+
+    def test_add_counter_invalid_amount_raises(self) -> None:
+        """Test add_counter raises ValueError for amount < 1."""
+        definition = CardDefinition(
+            oracle_id="test-id",
+            name="Test",
+            mana_cost="{0}",
+            type_line="Artifact",
+            oracle_text=None,
+            colors=(),
+            color_identity=(),
+            keywords=(),
+            power=None,
+            toughness=None,
+            loyalty=None,
+            layout="normal",
+        )
+        owner = Player("Alice", 20)
+        permanent = Permanent(definition, owner, owner)
+
+        with pytest.raises(ValueError, match="amount must be at least 1"):
+            permanent.add_counter("+1/+1", 0)
+
+        with pytest.raises(ValueError, match="amount must be at least 1"):
+            permanent.add_counter("+1/+1", -1)
+
+    def test_remove_counter_invalid_amount_raises(self) -> None:
+        """Test remove_counter raises ValueError for amount < 1."""
+        definition = CardDefinition(
+            oracle_id="test-id",
+            name="Test",
+            mana_cost="{0}",
+            type_line="Artifact",
+            oracle_text=None,
+            colors=(),
+            color_identity=(),
+            keywords=(),
+            power=None,
+            toughness=None,
+            loyalty=None,
+            layout="normal",
+        )
+        owner = Player("Alice", 20)
+        permanent = Permanent(definition, owner, owner)
+
+        with pytest.raises(ValueError, match="amount must be at least 1"):
+            permanent.remove_counter("+1/+1", 0)
+
+        with pytest.raises(ValueError, match="amount must be at least 1"):
+            permanent.remove_counter("+1/+1", -1)

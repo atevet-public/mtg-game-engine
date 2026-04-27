@@ -12,26 +12,8 @@ from mtgengine.abilities.cost import (
 from mtgengine.mana_cost import ManaCost as MtgManaCost
 from mtgengine.permanent import Permanent
 from mtgengine.player import Player
-from mtgengine.card_definition import CardDefinition
 from mtgengine.card import Card
-
-
-def make_card_def(name: str = "Test") -> CardDefinition:
-    """Helper to create a simple CardDefinition for testing."""
-    return CardDefinition(
-        oracle_id="test-id",
-        name=name,
-        mana_cost="{0}",
-        type_line="Artifact",
-        oracle_text=None,
-        colors=[],
-        color_identity=[],
-        keywords=[],
-        power=None,
-        toughness=None,
-        loyalty=None,
-        layout="normal",
-    )
+from mtgengine.tests.conftest import make_card_def
 
 
 class TestTapCost:
@@ -47,8 +29,8 @@ class TestTapCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = False
-        permanent.summoning_sick = False
+        permanent.is_tapped = False
+        permanent.is_summoning_sick = False
 
         cost = TapCost()
         assert cost.can_pay(permanent, player) is True
@@ -58,8 +40,8 @@ class TestTapCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = True
-        permanent.summoning_sick = False
+        permanent.is_tapped = True
+        permanent.is_summoning_sick = False
 
         cost = TapCost()
         assert cost.can_pay(permanent, player) is False
@@ -69,8 +51,8 @@ class TestTapCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = False
-        permanent.summoning_sick = True
+        permanent.is_tapped = False
+        permanent.is_summoning_sick = True
 
         cost = TapCost()
         assert cost.can_pay(permanent, player) is False
@@ -80,21 +62,21 @@ class TestTapCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = False
-        permanent.summoning_sick = False
+        permanent.is_tapped = False
+        permanent.is_summoning_sick = False
 
         cost = TapCost()
         cost.pay(permanent, player)
 
-        assert permanent.tapped is True
+        assert permanent.is_tapped is True
 
     def test_tap_cost_pay_raises_when_cannot_pay(self) -> None:
         """Test pay() raises ValueError when cost cannot be paid."""
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = True
-        permanent.summoning_sick = False
+        permanent.is_tapped = True
+        permanent.is_summoning_sick = False
 
         cost = TapCost()
         with pytest.raises(ValueError, match="Cannot tap"):
@@ -105,13 +87,13 @@ class TestSacrificeCost:
     """Test suite for the SacrificeCost class."""
 
     def test_sacrifice_cost_description_default(self) -> None:
-        """Test SacrificeCost description with default text."""
-        cost = SacrificeCost()
+        """Test SacrificeCost description returns the provided text."""
+        cost = SacrificeCost("Sacrifice this permanent")
         assert cost.description() == "Sacrifice this permanent"
 
     def test_sacrifice_cost_description_custom(self) -> None:
         """Test SacrificeCost description with custom text."""
-        cost = SacrificeCost("a creature")
+        cost = SacrificeCost("Sacrifice a creature")
         assert cost.description() == "Sacrifice a creature"
 
     def test_sacrifice_cost_can_pay_when_controller_matches(self) -> None:
@@ -120,7 +102,7 @@ class TestSacrificeCost:
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
 
-        cost = SacrificeCost()
+        cost = SacrificeCost("Sacrifice this permanent")
         assert cost.can_pay(permanent, player) is True
 
     def test_sacrifice_cost_can_pay_false_when_controller_different(self) -> None:
@@ -131,7 +113,7 @@ class TestSacrificeCost:
         card_def = make_card_def()
         permanent = Permanent(card_def, owner, controller)
 
-        cost = SacrificeCost()
+        cost = SacrificeCost("Sacrifice this permanent")
         assert cost.can_pay(permanent, other_player) is False
 
 
@@ -198,8 +180,8 @@ class TestCompoundCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = False
-        permanent.summoning_sick = False
+        permanent.is_tapped = False
+        permanent.is_summoning_sick = False
 
         # Add card to hand for discard
         player.hand.add_card(Card("Test Card", "Artifact"))
@@ -215,8 +197,8 @@ class TestCompoundCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = True  # Can't pay tap cost
-        permanent.summoning_sick = False
+        permanent.is_tapped = True  # Can't pay tap cost
+        permanent.is_summoning_sick = False
 
         # Add card to hand for discard
         player.hand.add_card(Card("Test Card", "Artifact"))
@@ -232,19 +214,19 @@ class TestCompoundCost:
         player = Player("Test", 20)
         card_def = make_card_def()
         permanent = Permanent(card_def, player, player)
-        permanent.tapped = False
-        permanent.summoning_sick = False
+        permanent.is_tapped = False
+        permanent.is_summoning_sick = False
 
         # Add card to hand for discard
         player.hand.add_card(Card("Test Card", "Artifact"))
 
         cost1 = TapCost()
-        cost2 = SacrificeCost()
+        cost2 = SacrificeCost("Sacrifice this permanent")
         compound = CompoundCost(cost1, cost2)
 
         # Should tap the permanent
         compound.pay(permanent, player)
-        assert permanent.tapped is True
+        assert permanent.is_tapped is True
 
     def test_compound_cost_raises_on_less_than_two_costs(self) -> None:
         """Test CompoundCost raises ValueError for less than 2 costs."""

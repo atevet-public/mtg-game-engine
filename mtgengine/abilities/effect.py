@@ -162,7 +162,7 @@ class CounterSpellEffect(Effect):
         pass  # TODO(Phase 4): remove target from stack
 
 
-class CreateTokenEffect(Effect):
+class CreateCreatureTokenEffect(Effect):
     """Create one or more creature tokens."""
 
     def __init__(
@@ -172,7 +172,7 @@ class CreateTokenEffect(Effect):
             raise ValueError("count must be at least 1")
         if toughness < 0:
             raise ValueError("toughness cannot be negative")
-        # Note: power CAN be negative (e.g., -1/-1 tokens exist in MTG)
+        # Note: power CAN be negative (e.g., -1/* tokens exist in MTG)
         self.count = count
         self.power = power
         self.toughness = toughness

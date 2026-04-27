@@ -34,17 +34,17 @@ class TestActivatedAbility:
 
         assert ability.cost is cost
         assert ability.effect is effect
-        assert ability.sorcery_speed is False
+        assert ability.is_sorcery_speed is False
 
     def test_activated_ability_sorcery_speed_default(self) -> None:
         """Test sorcery_speed defaults to False."""
         ability = ActivatedAbility(TapCost(), DrawCardsEffect(1))
-        assert ability.sorcery_speed is False
+        assert ability.is_sorcery_speed is False
 
     def test_activated_ability_sorcery_speed_true(self) -> None:
         """Test sorcery_speed can be set to True."""
-        ability = ActivatedAbility(TapCost(), DrawCardsEffect(1), sorcery_speed=True)
-        assert ability.sorcery_speed is True
+        ability = ActivatedAbility(TapCost(), DrawCardsEffect(1), is_sorcery_speed=True)
+        assert ability.is_sorcery_speed is True
 
     def test_activated_ability_description(self) -> None:
         """Test description format is '{cost}: {effect}'."""

@@ -27,11 +27,11 @@ class ActivatedAbility(Ability):
         self,
         cost: Cost,  # from mtgengine.abilities.cost
         effect: Effect,  # from mtgengine.abilities.effect
-        sorcery_speed: bool = False,  # True = can only activate at sorcery speed (main phase, empty stack)
+        is_sorcery_speed: bool = False,  # True = can only activate at sorcery speed (main phase, empty stack)
     ) -> None:
         self.cost = cost
         self.effect = effect
-        self.sorcery_speed = sorcery_speed
+        self.is_sorcery_speed = is_sorcery_speed
 
     def description(self) -> str:
         return f"{self.cost.description()}: {self.effect.description()}"

@@ -92,7 +92,7 @@ class KeywordAbility(Enum):
         Raises:
             ValueError: If the name is not a recognized keyword.
         """
-        normalized = name.strip().upper().replace(" ", "_").replace("-", "_")
+        normalized = name.strip().upper().replace(" ", "_")
         try:
             return cls[normalized]
         except KeyError:
