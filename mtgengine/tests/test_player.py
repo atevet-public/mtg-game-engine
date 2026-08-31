@@ -58,12 +58,10 @@ class TestPlayer:
         game = Game([active_player, non_active_player])
         turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
 
-        active_permanent = Card("Active Permanent", card_type="Creature")
-        active_permanent.controller = active_player
+        active_permanent = Card("Active Permanent", card_type="Creature", owner_index=0)
         active_permanent.tap()
 
-        non_active_permanent = Card("Non Active Permanent", card_type="Creature")
-        non_active_permanent.controller = non_active_player
+        non_active_permanent = Card("Non Active Permanent", card_type="Creature", owner_index=1)
         non_active_permanent.tap()
 
         game.battlefield.add_card(active_permanent)

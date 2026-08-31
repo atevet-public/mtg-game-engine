@@ -29,6 +29,7 @@ class Card:
         name: str,
         card_type: str,
         mana_cost: ManaCost | None = None,
+        owner_index: int | None = None,
         color_indicator: Iterable[str] | None = None,
         supertypes: Iterable[str] | None = None,
         subtypes: Iterable[str] | None = None,
@@ -44,6 +45,7 @@ class Card:
             name: The name of the card.
             card_type: The primary card type (validated).
             mana_cost: The mana cost of the card. Defaults to zero cost.
+            owner_index: Owning player's index in ``Game.players`` for shared zones.
             color_indicator: Optional iterable of color symbols (e.g. {'W', 'U'}).
             supertypes: Optional iterable of supertypes.
             subtypes: Optional iterable of subtypes.
@@ -61,6 +63,9 @@ class Card:
 
         # mana_cost defaults to zero cost
         self.mana_cost = mana_cost or ManaCost()
+        if owner_index is not None and (not isinstance(owner_index, int) or owner_index < 0):
+            raise ValueError("owner_index must be a non-negative int or None")
+        self.owner_index = owner_index
 
         # Normalise iterables to concrete container types
         self.color_indicator = set(color_indicator or ())

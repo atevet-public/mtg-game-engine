@@ -15,6 +15,8 @@ class Game:
 
         The battlefield is modeled as a shared zone. Deck, hand, graveyard, and
         exile remain player-owned zones in the current model. The stack is shared.
+        Each player keeps an intentional ``player.game`` back-reference for
+        event handlers that need shared game context.
 
         Args:
             players: List of players in the game (must have at least one).

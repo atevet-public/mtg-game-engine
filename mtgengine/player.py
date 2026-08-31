@@ -27,10 +27,9 @@ def handle_untap_step(event: TurnUntapStepEvent) -> None:
     active_player = event.turn.active_player
     if active_player.game is None:
         return
+    active_player_index = active_player.game.players.index(active_player)
     for permanent in active_player.game.battlefield.get_cards():
-        controller = getattr(permanent, "controller", None)
-        owner = getattr(permanent, "owner", None)
-        if controller is active_player or owner is active_player:
+        if permanent.owner_index == active_player_index:
             permanent.untap()
 
 
@@ -43,6 +42,10 @@ class Player:
         Args:
             name: The player's name.
             life_total: The player's starting life total.
+
+        Notes:
+            ``game`` is intentionally a back-reference set by ``Game`` so player-driven
+            events (like untap handling) can resolve shared zones and turn context.
         """
         self.name = name
         self.life_total = life_total
@@ -50,6 +53,7 @@ class Player:
         self.hand = Hand()
         self.graveyard = Graveyard()
         self.exile = Exile()
+        # Intentional back-reference for turn/event handlers that need game state.
         self.game: Game | None = None
 
     def draw_from_deck(self, n: int) -> None:

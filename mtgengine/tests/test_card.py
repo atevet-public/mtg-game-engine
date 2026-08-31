@@ -21,6 +21,7 @@ class TestCard:
         assert card.name == name
         assert isinstance(card.mana_cost, ManaCost)
         assert card.mana_cost.mana_value() == 0
+        assert card.owner_index is None
 
     def test_card_with_mana_cost(self) -> None:
         """Test Card initialization with explicit mana cost."""
@@ -60,3 +61,10 @@ class TestCard:
 
         card.untap()
         assert card.tapped is False
+
+
+    @pytest.mark.parametrize("owner_index", [0, 1])
+    def test_card_sets_owner_index(self, owner_index: int) -> None:
+        """Card should store explicit owner index for shared zones."""
+        card = Card("Owning Player Permanent", card_type="Creature", owner_index=owner_index)
+        assert card.owner_index == owner_index
