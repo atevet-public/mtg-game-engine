@@ -5,7 +5,6 @@ import pytest
 
 from mtgengine.player import Player
 from mtgengine.turn import TurnUntapStepEvent
-from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
@@ -42,7 +41,6 @@ class TestPlayer:
         assert isinstance(player.hand, Hand)
         assert isinstance(player.graveyard, Graveyard)
         assert isinstance(player.exile, Exile)
-        assert isinstance(player.battlefield, Battlefield)
 
     def test_player_zones_are_empty(self) -> None:
         """Test that a player's zones start empty."""
@@ -51,16 +49,18 @@ class TestPlayer:
         assert len(player.hand.get_cards()) == 0
         assert len(player.graveyard.get_cards()) == 0
         assert len(player.exile.get_cards()) == 0
-        assert len(player.battlefield.get_cards()) == 0
 
     def test_player_untap_step(self) -> None:
         """Test that the player's untap step untaps all permanents they control."""
         active_player = Player("Active", 20)
+        game = Mock()
+        game.battlefield.get_cards.return_value = []
+        active_player.game = game
         turn = Mock(active_player=active_player, turn_number=1)
 
         # Add a permanent to the active player's battlefield
         card = Mock()
-        active_player.battlefield.add_card(card)
+        game.battlefield.get_cards.return_value = [card]
 
         # Emit the untap step event
         event_emitter = AsyncIOEventEmitter()
@@ -68,3 +68,8 @@ class TestPlayer:
 
         # Verify that the card was untapped
         card.untap.assert_called_once()
+
+
+def test_player_does_not_own_battlefield_zone() -> None:
+    player = Player("Alice", 20)
+    assert not hasattr(player, "battlefield")

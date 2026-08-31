@@ -7,6 +7,7 @@ import pytest
 from mtgengine.card import Card
 from mtgengine.game import Game
 from mtgengine.player import Player
+from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.stack import Stack
 
 
@@ -63,7 +64,6 @@ class TestGame:
         # Current player should be set to a valid index
         assert game.current_player_index is not None
         assert 0 <= game.current_player_index < len(game.players)
-
     def test_start_game_without_rng_parameter(self) -> None:
         """Test that start_game works without an explicit RNG parameter."""
         # Create players with 20 cards each
@@ -89,3 +89,8 @@ class TestGame:
         # Current player should be set to a valid index
         assert game.current_player_index is not None
         assert 0 <= game.current_player_index < len(game.players)
+
+
+def test_game_has_shared_battlefield_zone() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    assert isinstance(game.battlefield, Battlefield)

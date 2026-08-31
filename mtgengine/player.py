@@ -1,6 +1,9 @@
 """Player class representing a Magic: The Gathering player."""
 
-from mtgengine.zone.battlefield import Battlefield
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
@@ -9,6 +12,9 @@ from mtgengine.zone.hand import Hand
 from pyventus.events import EventLinker
 
 from mtgengine.turn import TurnUntapStepEvent
+
+if TYPE_CHECKING:
+    from mtgengine.game import Game
 
 
 @EventLinker.on(TurnUntapStepEvent)
@@ -19,7 +25,9 @@ def handle_untap_step(event: TurnUntapStepEvent) -> None:
         event: The turn untap step event containing the turn and active player.
     """
     active_player = event.turn.active_player
-    for permanent in active_player.battlefield.get_cards():
+    if active_player.game is None:
+        return
+    for permanent in active_player.game.battlefield.get_cards():
         permanent.untap()
 
 
@@ -39,7 +47,7 @@ class Player:
         self.hand = Hand()
         self.graveyard = Graveyard()
         self.exile = Exile()
-        self.battlefield = Battlefield()
+        self.game: Game | None = None
 
     def draw_from_deck(self, n: int) -> None:
         """Draw n cards from the deck and add them to the player's hand.
