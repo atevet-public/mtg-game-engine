@@ -11,7 +11,10 @@ class Game:
     """Represents a Magic: The Gathering game."""
 
     def __init__(self, players: list[Player]) -> None:
-        """Initialize a Game with one or more players and a shared stack.
+        """Initialize a Game with one or more players and shared game zones.
+
+        The battlefield is modeled as a shared zone. Deck, hand, graveyard, and
+        exile remain player-owned zones in the current model. The stack is shared.
 
         Args:
             players: List of players in the game (must have at least one).

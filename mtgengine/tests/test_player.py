@@ -4,7 +4,7 @@ import pytest
 
 from mtgengine.card import Card
 from mtgengine.game import Game
-from mtgengine.player import Player
+from mtgengine.player import Player, handle_untap_step
 from mtgengine.turn import TurnUntapStepEvent
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
@@ -74,6 +74,16 @@ class TestPlayer:
 
         assert active_permanent.tapped is False
         assert non_active_permanent.tapped is True
+
+    def test_player_untap_step_noops_when_active_player_has_no_game(self) -> None:
+        """Test that untap handling is a safe no-op with no attached game."""
+        active_player = Player("Active", 20)
+        turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
+        event = TurnUntapStepEvent(turn)
+
+        handle_untap_step(event)
+
+        assert active_player.game is None
 
 
 def test_player_does_not_own_battlefield_zone() -> None:
