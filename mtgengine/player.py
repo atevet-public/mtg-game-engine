@@ -27,7 +27,10 @@ def handle_untap_step(event: TurnUntapStepEvent) -> None:
     active_player = event.turn.active_player
     if active_player.game is None:
         return
-    active_player_index = active_player.game.players.index(active_player)
+    try:
+        active_player_index = active_player.game.players.index(active_player)
+    except ValueError:
+        return
     for permanent in active_player.game.battlefield.get_cards():
         if permanent.owner_index == active_player_index:
             permanent.untap()

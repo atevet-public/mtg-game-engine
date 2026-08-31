@@ -83,6 +83,17 @@ class TestPlayer:
 
         assert active_player.game is None
 
+    def test_player_untap_step_noops_when_active_player_not_in_game_players(self) -> None:
+        """Test untap handling safely no-ops if active player is not indexed in game."""
+        active_player = Player("Active", 20)
+        game_player = Player("In Game", 20)
+        game = Game([game_player])
+        active_player.game = game
+        turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
+        event = TurnUntapStepEvent(turn)
+
+        handle_untap_step(event)
+
 
 def test_player_does_not_own_battlefield_zone() -> None:
     player = Player("Alice", 20)

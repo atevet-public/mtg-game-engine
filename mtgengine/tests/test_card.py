@@ -68,3 +68,18 @@ class TestCard:
         """Card should store explicit owner index for shared zones."""
         card = Card("Owning Player Permanent", card_type="Creature", owner_index=owner_index)
         assert card.owner_index == owner_index
+
+    @pytest.mark.parametrize(
+        ("owner_index", "expected_exception"),
+        [
+            (True, TypeError),
+            ("0", TypeError),
+            (-1, ValueError),
+        ],
+    )
+    def test_card_rejects_invalid_owner_index(
+        self, owner_index: object, expected_exception: type[Exception]
+    ) -> None:
+        """Card should reject bool/non-int/negative owner indexes."""
+        with pytest.raises(expected_exception):
+            Card("Invalid Owner", card_type="Creature", owner_index=owner_index)  # type: ignore[arg-type]

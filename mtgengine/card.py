@@ -63,7 +63,9 @@ class Card:
 
         # mana_cost defaults to zero cost
         self.mana_cost = mana_cost or ManaCost()
-        if owner_index is not None and (not isinstance(owner_index, int) or owner_index < 0):
+        if owner_index is not None and type(owner_index) is not int:
+            raise TypeError("owner_index must be an int or None")
+        if isinstance(owner_index, int) and owner_index < 0:
             raise ValueError("owner_index must be a non-negative int or None")
         self.owner_index = owner_index
 
