@@ -30,6 +30,7 @@ class Game:
         self.battlefield = Battlefield()
         self.stack = Stack()
         self.current_player_index: int | None = None
+        self.turn_number = 1
         for player in self.players:
             player.game = self
 
@@ -45,9 +46,9 @@ class Game:
         for player in self.players:
             player.deck.shuffle(rng)
 
+        self.current_player_index = 0
+        self.turn_number = 1
+
         # Deal 7 cards to each player
         for player in self.players:
             player.draw_from_deck(7)
-
-        # Select first player randomly
-        self.current_player_index = rng.randrange(len(self.players))

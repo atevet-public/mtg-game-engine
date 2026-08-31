@@ -91,6 +91,18 @@ class TestGame:
         assert 0 <= game.current_player_index < len(game.players)
 
 
+def test_start_game_sets_player_zero_active() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    # preload 60 lands in each deck
+    for player in game.players:
+        for _ in range(60):
+            player.deck.add_card(Card("Forest", card_type="Land"))
+
+    game.start_game()
+    assert game.current_player_index == 0
+    assert game.turn_number == 1
+
+
 def test_game_has_shared_battlefield_zone() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     assert isinstance(game.battlefield, Battlefield)
