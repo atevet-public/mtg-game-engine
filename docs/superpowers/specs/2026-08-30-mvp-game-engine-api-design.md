@@ -246,13 +246,19 @@ This matches the rule that the turn counter increments after each player has com
 
 The MVP game ends when the active player attempts to draw a card from an empty deck during the draw step.
 
-This is not a generic “lose if you run out of cards” rule. It is a specific, deterministic game-ending condition that matches the requested MVP behavior:
+This aligns directly with the rules:
+
+- CR 121.4: A player who attempts to draw from an empty library loses the game the next time a player would receive priority.
+- CR 104.3c: If a player is required to draw more cards than remain in their library, they draw what they can and then lose the game the next time a player would receive priority.
+
+For this MVP, the engine will implement a deterministic approximation of that timing by ending the game immediately when the draw attempt fails during `perform_draw_step()`.
+
+The MVP still intentionally excludes unrelated loss/win paths:
 
 - no replacement effect
 - no extra draw rules
 - no mulligans
 - no extra stack interactions
-- immediate loss when the draw attempt fails
 
 The state should then read:
 
