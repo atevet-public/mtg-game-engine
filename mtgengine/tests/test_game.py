@@ -64,6 +64,7 @@ class TestGame:
         # Current player should be set to a valid index
         assert game.current_player_index is not None
         assert 0 <= game.current_player_index < len(game.players)
+
     def test_start_game_without_rng_parameter(self) -> None:
         """Test that start_game works without an explicit RNG parameter."""
         # Create players with 20 cards each

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from pyventus.events import EventEmitter, AsyncIOEventEmitter
+
+from pyventus.events import AsyncIOEventEmitter, EventEmitter
 
 if TYPE_CHECKING:
     from mtgengine.player import Player

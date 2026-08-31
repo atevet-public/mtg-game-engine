@@ -62,7 +62,6 @@ class TestCard:
         card.untap()
         assert card.tapped is False
 
-
     @pytest.mark.parametrize("owner_index", [0, 1])
     def test_card_sets_owner_index(self, owner_index: int) -> None:
         """Card should store explicit owner index for shared zones."""

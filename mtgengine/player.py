@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pyventus.events import EventLinker
+
+from mtgengine.turn import TurnUntapStepEvent
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
-
-from pyventus.events import EventLinker
-
-from mtgengine.turn import TurnUntapStepEvent
 
 if TYPE_CHECKING:
     from mtgengine.game import Game

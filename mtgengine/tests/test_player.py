@@ -1,6 +1,7 @@
 """Tests for Player class."""
 
 import pytest
+from pyventus.events import AsyncIOEventEmitter
 
 from mtgengine.card import Card
 from mtgengine.game import Game
@@ -10,8 +11,6 @@ from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
-
-from pyventus.events import AsyncIOEventEmitter
 
 
 class TestPlayer:
