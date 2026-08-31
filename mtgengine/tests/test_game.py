@@ -94,3 +94,11 @@ class TestGame:
 def test_game_has_shared_battlefield_zone() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     assert isinstance(game.battlefield, Battlefield)
+
+
+def test_game_sets_player_game_reference() -> None:
+    player1 = Player("Alice", 20)
+    player2 = Player("Bob", 20)
+    game = Game([player1, player2])
+    assert player1.game is game
+    assert player2.game is game

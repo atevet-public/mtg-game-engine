@@ -1,8 +1,9 @@
 """Tests for Player class."""
 
-from unittest.mock import Mock
 import pytest
 
+from mtgengine.card import Card
+from mtgengine.game import Game
 from mtgengine.player import Player
 from mtgengine.turn import TurnUntapStepEvent
 from mtgengine.zone.deck import Deck
@@ -50,24 +51,29 @@ class TestPlayer:
         assert len(player.graveyard.get_cards()) == 0
         assert len(player.exile.get_cards()) == 0
 
-    def test_player_untap_step(self) -> None:
-        """Test that the player's untap step untaps all permanents they control."""
+    def test_player_untap_step_untaps_only_active_player_permanents(self) -> None:
+        """Test that untap step only untaps active player's permanents."""
         active_player = Player("Active", 20)
-        game = Mock()
-        game.battlefield.get_cards.return_value = []
-        active_player.game = game
-        turn = Mock(active_player=active_player, turn_number=1)
+        non_active_player = Player("Non Active", 20)
+        game = Game([active_player, non_active_player])
+        turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
 
-        # Add a permanent to the active player's battlefield
-        card = Mock()
-        game.battlefield.get_cards.return_value = [card]
+        active_permanent = Card("Active Permanent", card_type="Creature")
+        active_permanent.controller = active_player
+        active_permanent.tap()
 
-        # Emit the untap step event
+        non_active_permanent = Card("Non Active Permanent", card_type="Creature")
+        non_active_permanent.controller = non_active_player
+        non_active_permanent.tap()
+
+        game.battlefield.add_card(active_permanent)
+        game.battlefield.add_card(non_active_permanent)
+
         event_emitter = AsyncIOEventEmitter()
         event_emitter.emit(TurnUntapStepEvent(turn))
 
-        # Verify that the card was untapped
-        card.untap.assert_called_once()
+        assert active_permanent.tapped is False
+        assert non_active_permanent.tapped is True
 
 
 def test_player_does_not_own_battlefield_zone() -> None:

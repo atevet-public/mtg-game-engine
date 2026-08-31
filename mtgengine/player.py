@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 @EventLinker.on(TurnUntapStepEvent)
 def handle_untap_step(event: TurnUntapStepEvent) -> None:
-    """Handle the untap step event by untapping permanents of the active player.
+    """Handle untap by untapping only active player's shared-battlefield permanents.
 
     Args:
         event: The turn untap step event containing the turn and active player.
@@ -28,7 +28,10 @@ def handle_untap_step(event: TurnUntapStepEvent) -> None:
     if active_player.game is None:
         return
     for permanent in active_player.game.battlefield.get_cards():
-        permanent.untap()
+        controller = getattr(permanent, "controller", None)
+        owner = getattr(permanent, "owner", None)
+        if controller is active_player or owner is active_player:
+            permanent.untap()
 
 
 class Player:
