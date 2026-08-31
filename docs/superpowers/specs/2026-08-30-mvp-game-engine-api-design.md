@@ -38,6 +38,8 @@ The design specifically relies on the Comprehensive Rules for lands:
 
 - CR 116.2a: “Playing a land is a special action… it doesn’t use the stack.”
 - CR 305.1: “Playing a land is a special action; it doesn’t use the stack… the player simply puts the land onto the battlefield.”
+- CR 400.1: Each player has their own library, hand, and graveyard; other zones (including battlefield) are shared.
+- CR 403.1: The battlefield is a shared game area that starts empty.
 
 Because a land is not a spell and does not use the stack, the MVP does not include a `Stack` object or stack state in the game model or snapshot.
 
@@ -88,7 +90,6 @@ class Player:
     hand: Hand
     graveyard: Graveyard
     exile: Exile
-    battlefield: Battlefield
 ```
 
 The following are intentionally not added:
@@ -104,6 +105,7 @@ These concerns are out of scope for the MVP, and they do not contribute to the r
 ```python
 class Game:
     players: list[Player]
+    battlefield: Battlefield
     current_player_index: int
     turn_number: int
     is_game_over: bool
@@ -115,7 +117,7 @@ The game does not store a `stack` attribute because lands are not cast as spells
 
 ### Battlefield representation
 
-For the MVP, the battlefield consists only of lands. Each land record should carry its owner so a snapshot can reconstruct which player controls it.
+For the MVP, the battlefield is a single shared zone and consists only of lands. Each land record carries owner metadata so a snapshot can reconstruct who controls each permanent.
 
 ```python
 @dataclass(frozen=True)
@@ -135,11 +137,11 @@ The game state should be serialized as a JSON-friendly structure that includes:
 - the ordered hand contents for each player
 - graveyard contents for each player
 - exile contents for each player
-- battlefield contents for each player as ordered land records with owner metadata
+- shared battlefield contents as ordered land records with owner metadata
 - turn number
 - current player index
 - `is_game_over`
-- winner if present
+- winner index if present
 - event log
 
 Example shape:
@@ -149,30 +151,29 @@ Example shape:
   "turn_number": 3,
   "current_player_index": 1,
   "is_game_over": false,
-  "winner": null,
+  "winner_index": null,
   "players": [
     {
       "name": "Alice",
       "deck": ["Forest", "Forest"],
       "hand": ["Forest", "Forest"],
       "graveyard": [],
-      "exile": [],
-      "battlefield": [
-        {"owner_index": 0, "card_name": "Forest", "tapped": false}
-      ]
+      "exile": []
     },
     {
       "name": "Bob",
       "deck": ["Forest"],
       "hand": ["Forest"],
       "graveyard": [],
-      "exile": [],
-      "battlefield": []
+      "exile": []
     }
   ],
+  "battlefield": [
+    {"owner_index": 0, "card_name": "Forest", "tapped": false}
+  ],
   "event_log": [
-    {"type": "start_game", "player_names": ["Alice", "Bob"]},
-    {"type": "draw", "player": "Alice", "card": "Forest"}
+    {"type": "start_game", "player_indices": [0, 1]},
+    {"type": "draw", "player_index": 0, "card": "Forest"}
   ]
 }
 ```
@@ -196,7 +197,7 @@ The MVP turn flow is intentionally narrow and deterministic:
    - call `perform_draw_step()`
 
 3. `perform_untap_step()`
-   - untap all lands on the active player’s battlefield
+   - untap lands on the shared battlefield controlled by the active player
    - lands are always untapped in this MVP unless later work adds a tap state rule
 
 4. `perform_upkeep_step()`
@@ -214,7 +215,7 @@ The MVP turn flow is intentionally narrow and deterministic:
 
 7. `perform_play_land()`
    - deletes the top land from hand
-   - appends a new land record to the active player’s battlefield
+   - appends a new land record to the shared battlefield
    - always marks it untapped
    - owner is the active player
 
@@ -364,6 +365,8 @@ This design deliberately chooses the smallest workable engine model:
 - no stack
 - no poison counters
 - no player activity flags
+- shared battlefield zone (not per-player battlefield)
+- consistent `player_index` keys across battlefield owner fields and event-log player references
 - explicit `perform_*` methods
 - battlefield lands with owner metadata
 - deterministic two-player turn flow
