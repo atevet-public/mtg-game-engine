@@ -1,7 +1,5 @@
 """Zone base class representing game areas in Magic: The Gathering."""
 
-from typing import List
-
 from mtgengine.card import Card
 
 
@@ -15,7 +13,7 @@ class Zone:
             name: The name of the zone.
         """
         self.name = name
-        self.cards: List[Card] = []
+        self.cards: list[Card] = []
 
     def add_card(self, card: Card) -> None:
         """
@@ -36,7 +34,7 @@ class Zone:
         if card in self.cards:
             self.cards.remove(card)
 
-    def get_cards(self) -> List[Card]:
+    def get_cards(self) -> list[Card]:
         """
         Get all cards in the zone.
 

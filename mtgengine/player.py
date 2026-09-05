@@ -1,14 +1,13 @@
 """Player class representing a Magic: The Gathering player."""
 
+from pyventus.events import EventLinker
+
+from mtgengine.turn import TurnUntapStepEvent
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
-
-from pyventus.events import EventLinker
-
-from mtgengine.turn import TurnUntapStepEvent
 
 
 @EventLinker.on(TurnUntapStepEvent)

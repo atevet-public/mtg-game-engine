@@ -1,7 +1,9 @@
 """Tests for Player class."""
 
 from unittest.mock import Mock
+
 import pytest
+from pyventus.events import AsyncIOEventEmitter
 
 from mtgengine.player import Player
 from mtgengine.turn import TurnUntapStepEvent
@@ -10,8 +12,6 @@ from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
-
-from pyventus.events import AsyncIOEventEmitter
 
 
 class TestPlayer:

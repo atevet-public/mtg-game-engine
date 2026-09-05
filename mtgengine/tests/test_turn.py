@@ -1,23 +1,25 @@
 from unittest.mock import Mock
+
+from pyventus.events import EventLinker
+
 from mtgengine.turn import (
     Turn,
-    TurnUntapStepEvent,
-    TurnBeginningPhaseEvent,
-    TurnUpkeepStepEvent,
-    TurnDrawStepEvent,
-    TurnPrecombatMainPhaseEvent,
-    TurnCombatPhaseEvent,
     TurnBeginningOfCombatStepEvent,
+    TurnBeginningPhaseEvent,
+    TurnCleanupStepEvent,
+    TurnCombatDamageStepEvent,
+    TurnCombatPhaseEvent,
     TurnDeclareAttackersStepEvent,
     TurnDeclareBlockersStepEvent,
-    TurnCombatDamageStepEvent,
-    TurnEndOfCombatStepEvent,
-    TurnPostcombatMainPhaseEvent,
+    TurnDrawStepEvent,
     TurnEndingPhaseEvent,
+    TurnEndOfCombatStepEvent,
     TurnEndStepEvent,
-    TurnCleanupStepEvent,
+    TurnPostcombatMainPhaseEvent,
+    TurnPrecombatMainPhaseEvent,
+    TurnUntapStepEvent,
+    TurnUpkeepStepEvent,
 )
-from pyventus.events import EventLinker
 
 
 class TestTurn:
