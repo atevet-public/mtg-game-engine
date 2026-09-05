@@ -287,7 +287,7 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement minimal code**
 ```python
-def draw_card_from_deck(self):
+def draw_card_from_deck(self) -> Card | None:
     player = self.players[self.current_player_index]
     cards = player.deck.draw(1) if player.deck.get_cards() else []
     if not cards:
@@ -317,7 +317,7 @@ git commit -m "feat: add draw_card_from_deck helper"
 ```python
 def test_check_for_empty_deck_loss_sets_game_outcome() -> None:
     game = empty_deck_game(current_player_index=0)
-    did_lose = game.check_for_empty_deck_loss(draw_succeeded=False)
+    did_lose = game.check_for_empty_deck_loss()
     assert did_lose is True
     assert game.is_game_over is True
     assert game.winner == game.players[1]
@@ -329,14 +329,14 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement minimal code**
 ```python
-def check_for_empty_deck_loss(self, draw_succeeded: bool) -> bool:
-    if draw_succeeded:
-        return False
-    self.is_game_over = True
-    loser_index = self.current_player_index
-    self.winner = self.players[1 - loser_index]
-    self.event_log.append({"type": "lose_on_empty_library", "player_index": loser_index})
-    return True
+def check_for_empty_deck_loss(self) -> bool:
+    # pseudo-code
+    # if the deck is empty and the player would draw a card
+    #   Record the loss
+    #   Update state to reflect the winner
+    #   return True
+    # else
+    #   return False
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -375,7 +375,7 @@ Expected: FAIL
 def perform_draw_step(self) -> None:
     card = self.draw_card_from_deck()
     self.event_log.append({"type": "draw_step", "player_index": self.current_player_index})
-    self.check_for_empty_deck_loss(draw_succeeded=card is not None)
+    self.check_for_empty_deck_loss()
 ```
 
 - [ ] **Step 4: Re-run test**

@@ -72,6 +72,7 @@ class Game:
     def advance_turn(self) -> None: ...
     def snapshot(self) -> GameSnapshot: ...
     def to_json(self) -> str: ...
+    @classmethod
     def from_json(self, payload: str) -> "Game": ...
 ```
 
@@ -290,7 +291,7 @@ Responsibilities:
 
 - inspect the active player’s deck after the draw attempt
 - if the deck is empty and the draw failed, set `is_game_over = True` and record the loss
-- update `winner` and `loser` state
+- update `winner` state
 
 ### `perform_play_land()`
 
