@@ -24,8 +24,7 @@ def handle_untap_step(event: TurnUntapStepEvent) -> None:
         event: The turn untap step event containing the turn and active player.
     """
     active_player = event.turn.active_player
-    if active_player.game is None:
-        return
+    assert active_player is not None
     try:
         active_player_index = active_player.game.players.index(active_player)
     except ValueError:

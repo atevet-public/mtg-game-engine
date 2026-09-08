@@ -1,6 +1,5 @@
 """Battlefield zone representing the battlefield in Magic: The Gathering."""
 
-from mtgengine.card import Card
 from mtgengine.zone import Zone
 
 
