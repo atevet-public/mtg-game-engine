@@ -25,6 +25,9 @@ def handle_untap_step(event: TurnUntapStepEvent) -> None:
     """
     active_player = event.turn.active_player
     assert active_player is not None
+
+    if active_player.game is None:
+        raise AttributeError("Active player has no game attached.")
     try:
         active_player_index = active_player.game.players.index(active_player)
     except ValueError:
