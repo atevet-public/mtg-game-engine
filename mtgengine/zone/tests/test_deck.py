@@ -22,7 +22,7 @@ class TestDeck:
     def test_deck_add_card(self) -> None:
         """Test adding a card to the Deck."""
         deck = Deck()
-        card = Card("Card 1", card_type="Creature")
+        card = Card("Card 1", card_type="Creature", owner_index=1)
         deck.add_card(card)
         assert len(deck.cards) == 1
         assert deck.cards[0] == card
@@ -30,9 +30,9 @@ class TestDeck:
     def test_deck_maintains_insertion_order(self) -> None:
         """Test that Deck maintains cards in insertion order."""
         deck = Deck()
-        card1 = Card("Card 1", card_type="Creature")
-        card2 = Card("Card 2", card_type="Creature")
-        card3 = Card("Card 3", card_type="Creature")
+        card1 = Card("Card 1", card_type="Creature", owner_index=1)
+        card2 = Card("Card 2", card_type="Creature", owner_index=1)
+        card3 = Card("Card 3", card_type="Creature", owner_index=1)
 
         deck.add_card(card1)
         deck.add_card(card2)
@@ -45,7 +45,7 @@ class TestDeck:
     def test_deck_remove_card(self) -> None:
         """Test removing a card from the Deck."""
         deck = Deck()
-        card = Card("Card", card_type="Creature")
+        card = Card("Card", card_type="Creature", owner_index=1)
         deck.add_card(card)
         deck.remove_card(card)
         assert len(deck.cards) == 0
@@ -53,8 +53,8 @@ class TestDeck:
     def test_deck_get_cards(self) -> None:
         """Test getting cards from the Deck."""
         deck = Deck()
-        card1 = Card("Card 1", card_type="Creature")
-        card2 = Card("Card 2", card_type="Creature")
+        card1 = Card("Card 1", card_type="Creature", owner_index=1)
+        card2 = Card("Card 2", card_type="Creature", owner_index=1)
 
         deck.add_card(card1)
         deck.add_card(card2)

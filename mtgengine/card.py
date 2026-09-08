@@ -27,6 +27,7 @@ class Card:
         self,
         name: str,
         card_type: str,
+        owner_index: int,
         mana_cost: ManaCost | None = None,
         color_indicator: Iterable[str] | None = None,
         supertypes: Iterable[str] | None = None,
@@ -42,6 +43,7 @@ class Card:
         Args:
             name: The name of the card.
             card_type: The primary card type (validated).
+            owner_index: Owning player's index in ``Game.players`` for shared zones.
             mana_cost: The mana cost of the card. Defaults to zero cost.
             color_indicator: Optional iterable of color symbols (e.g. {'W', 'U'}).
             supertypes: Optional iterable of supertypes.
@@ -60,6 +62,7 @@ class Card:
 
         # mana_cost defaults to zero cost
         self.mana_cost = mana_cost or ManaCost()
+        self.owner_index = owner_index
 
         # Normalise iterables to concrete container types
         self.color_indicator = set(color_indicator or ())
@@ -91,3 +94,15 @@ class Card:
     def untap(self) -> None:
         """Mark the card as untapped."""
         self.tapped = False
+
+    @property
+    def owner_index(self) -> int:
+        return self._owner_index
+
+    @owner_index.setter
+    def owner_index(self, value: int) -> None:
+        if not isinstance(value, int):
+            raise TypeError("owner_index must be an int")
+        if value < 0:
+            raise ValueError("owner_index must be a non-negative int")
+        self._owner_index = value
