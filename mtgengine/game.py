@@ -34,6 +34,12 @@ class Game:
         for player in self.players:
             player.game = self
 
+        # Game state flags
+        self.is_game_over = False
+        self.winner = None
+        # Indexed event log: list of event dicts with sequential indices
+        self.event_log: list[dict[str, object]] = []
+
     def start_game(self, rng: random.Random | None = None) -> None:
         """Start the game: shuffle decks, deal 7 cards to each player, and select first player.
 
