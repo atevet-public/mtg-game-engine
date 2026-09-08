@@ -73,7 +73,7 @@ class TestPlayer:
         assert non_active_permanent.tapped is True
 
     def test_player_untap_step_raises_when_active_player_has_no_game(self) -> None:
-        """Test that untap handling is a safe no-op with no attached game."""
+        """Test that untap handling raises an error with no attached game."""
         active_player = Player("Active", 20)
         turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
         event = TurnUntapStepEvent(turn)

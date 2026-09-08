@@ -43,8 +43,8 @@ class Card:
         Args:
             name: The name of the card.
             card_type: The primary card type (validated).
-            mana_cost: The mana cost of the card. Defaults to zero cost.
             owner_index: Owning player's index in ``Game.players`` for shared zones.
+            mana_cost: The mana cost of the card. Defaults to zero cost.
             color_indicator: Optional iterable of color symbols (e.g. {'W', 'U'}).
             supertypes: Optional iterable of supertypes.
             subtypes: Optional iterable of subtypes.
