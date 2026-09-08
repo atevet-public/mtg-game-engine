@@ -42,9 +42,9 @@ class TestGame:
 
         # Populate their decks with cards
         for i in range(20):
-            card = Card(f"Card {i}", card_type="Creature")
+            card = Card(f"Card {i}", card_type="Creature", owner_index=0)
             player1.deck.add_card(card)
-            card = Card(f"Card {i}", card_type="Creature")
+            card = Card(f"Card {i}", card_type="Creature", owner_index=1)
             player2.deck.add_card(card)
 
         game = Game([player1, player2])
@@ -73,9 +73,9 @@ class TestGame:
 
         # Populate their decks with cards
         for i in range(20):
-            card = Card(f"Card {i}", card_type="Creature")
+            card = Card(f"Card {i}", card_type="Creature", owner_index=0)
             player1.deck.add_card(card)
-            card = Card(f"Card {i}", card_type="Creature")
+            card = Card(f"Card {i}", card_type="Creature", owner_index=1)
             player2.deck.add_card(card)
 
         game = Game([player1, player2])
@@ -95,9 +95,9 @@ class TestGame:
 def test_start_game_sets_player_zero_active() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     # preload 60 lands in each deck
-    for player in game.players:
+    for player_index, player in enumerate(game.players):
         for _ in range(60):
-            player.deck.add_card(Card("Forest", card_type="Land"))
+            player.deck.add_card(Card("Forest", card_type="Land", owner_index=player_index))
 
     game.start_game()
     assert game.current_player_index == 0

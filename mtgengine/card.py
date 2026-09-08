@@ -27,8 +27,8 @@ class Card:
         self,
         name: str,
         card_type: str,
+        owner_index: int,
         mana_cost: ManaCost | None = None,
-        owner_index: int | None = None,
         color_indicator: Iterable[str] | None = None,
         supertypes: Iterable[str] | None = None,
         subtypes: Iterable[str] | None = None,
@@ -62,10 +62,6 @@ class Card:
 
         # mana_cost defaults to zero cost
         self.mana_cost = mana_cost or ManaCost()
-        if owner_index is not None and type(owner_index) is not int:
-            raise TypeError("owner_index must be an int or None")
-        if isinstance(owner_index, int) and owner_index < 0:
-            raise ValueError("owner_index must be a non-negative int or None")
         self.owner_index = owner_index
 
         # Normalise iterables to concrete container types
@@ -98,3 +94,15 @@ class Card:
     def untap(self) -> None:
         """Mark the card as untapped."""
         self.tapped = False
+
+    @property
+    def owner_index(self) -> int:
+        return self._owner_index
+
+    @owner_index.setter
+    def owner_index(self, value: int) -> None:
+        if not isinstance(value, int):
+            raise TypeError("owner_index must be an int")
+        if value < 0:
+            raise ValueError("owner_index must be a non-negative int")
+        self._owner_index = value

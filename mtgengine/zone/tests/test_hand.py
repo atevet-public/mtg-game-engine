@@ -17,7 +17,7 @@ class TestHand:
     def test_hand_add_card(self) -> None:
         """Test adding a card to Hand."""
         hand = Hand()
-        card = Card("Card in Hand", card_type="Creature")
+        card = Card("Card in Hand", card_type="Creature", owner_index=1)
         hand.add_card(card)
         assert len(hand.cards) == 1
 
