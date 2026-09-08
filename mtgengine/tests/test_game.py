@@ -115,3 +115,22 @@ def test_game_sets_player_game_reference() -> None:
     game = Game([player1, player2])
     assert player1.game is game
     assert player2.game is game
+
+
+def test_perform_beginning_phase_calls_steps_in_order(monkeypatch) -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    calls: list[str] = []
+
+    def make_step(name: str):
+        def _step() -> None:
+            calls.append(name)
+
+        return _step
+
+    monkeypatch.setattr(game, "perform_untap_step", make_step("untap"))
+    monkeypatch.setattr(game, "perform_upkeep_step", make_step("upkeep"))
+    monkeypatch.setattr(game, "perform_draw_step", make_step("draw"))
+
+    game.perform_beginning_phase()
+
+    assert calls == ["untap", "upkeep", "draw"]

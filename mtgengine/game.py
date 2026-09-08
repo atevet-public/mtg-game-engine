@@ -52,3 +52,18 @@ class Game:
         # Deal 7 cards to each player
         for player in self.players:
             player.draw_from_deck(7)
+
+    def perform_beginning_phase(self) -> None:
+        """Perform the beginning phase in order."""
+        self.perform_untap_step()
+        self.perform_upkeep_step()
+        self.perform_draw_step()
+
+    def perform_untap_step(self) -> None:
+        """Untap permanents controlled by the active player."""
+
+    def perform_upkeep_step(self) -> None:
+        """Resolve upkeep effects for the active player."""
+
+    def perform_draw_step(self) -> None:
+        """Draw a card for the active player."""
