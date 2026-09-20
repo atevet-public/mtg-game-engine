@@ -115,3 +115,10 @@ def test_game_sets_player_game_reference() -> None:
     game = Game([player1, player2])
     assert player1.game is game
     assert player2.game is game
+
+
+def test_game_state_flags_initialize() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    assert game.is_game_over is False
+    assert game.winner is None
+    assert game.event_log == []

@@ -26,13 +26,19 @@ class Game:
         """
         if not players:
             raise ValueError("A game must have at least one player")
-        self.players = players
-        self.battlefield = Battlefield()
-        self.stack = Stack()
+        self.players: list[Player] = players
+        self.battlefield: Battlefield = Battlefield()
+        self.stack: Stack = Stack()
         self.current_player_index: int | None = None
-        self.turn_number = 1
+        self.turn_number: int = 1
         for player in self.players:
             player.game = self
+
+        # Game state flags
+        self.is_game_over: bool = False
+        self.winner: Player | None = None
+        # Indexed event log: list of event dicts with sequential indices
+        self.event_log: list[dict[str, object]] = []
 
     def start_game(self, rng: random.Random | None = None) -> None:
         """Start the game: shuffle decks, deal 7 cards to each player, and select first player.
