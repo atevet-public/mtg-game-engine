@@ -2,6 +2,8 @@
 
 import random
 
+from pyventus.events import EventLinker
+
 from mtgengine.player import Player
 from mtgengine.turn import (
     Turn,
@@ -38,6 +40,7 @@ class Game:
         self.turn = Turn(1, self.players[0])
         for player in self.players:
             player.game = self
+        EventLinker.on(TurnUntapStepEvent)(self._handle_untap_step)
 
         # Game state flags
         self.is_game_over: bool = False
@@ -70,6 +73,13 @@ class Game:
     def perform_untap_step(self) -> None:
         """Untap permanents controlled by the active player."""
         self._emit_step_event(TurnUntapStepEvent)
+
+    def _handle_untap_step(self, event: TurnUntapStepEvent) -> None:
+        """Untap permanents owned by the active player."""
+        active_index = self.players.index(event.turn.active_player)
+        for permanent in self.battlefield.get_cards():
+            if permanent.owner_index == active_index:
+                permanent.untap()
 
     def perform_upkeep_step(self) -> None:
         """Resolve upkeep effects for the active player."""
