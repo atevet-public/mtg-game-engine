@@ -3,6 +3,12 @@
 import random
 
 from mtgengine.player import Player
+from mtgengine.turn import (
+    Turn,
+    TurnDrawStepEvent,
+    TurnUntapStepEvent,
+    TurnUpkeepStepEvent,
+)
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.stack import Stack
 
@@ -29,8 +35,8 @@ class Game:
         self.players: list[Player] = players
         self.battlefield: Battlefield = Battlefield()
         self.stack: Stack = Stack()
-        self.current_player_index: int | None = None
-        self.turn_number: int = 1
+        self.current_player_index = 0
+        self.turn = Turn(1, self.players[self.current_player_index])
         for player in self.players:
             player.game = self
 
@@ -52,9 +58,28 @@ class Game:
         for player in self.players:
             player.deck.shuffle(rng)
 
-        self.current_player_index = 0
-        self.turn_number = 1
-
         # Deal 7 cards to each player
         for player in self.players:
             player.draw_from_deck(7)
+
+    def perform_beginning_phase(self) -> None:
+        """Perform the beginning phase in order."""
+        self.perform_untap_step()
+        self.perform_upkeep_step()
+        self.perform_draw_step()
+
+    def perform_untap_step(self) -> None:
+        """Untap permanents controlled by the active player."""
+        self._emit_step_event(TurnUntapStepEvent)
+
+    def perform_upkeep_step(self) -> None:
+        """Resolve upkeep effects for the active player."""
+        self._emit_step_event(TurnUpkeepStepEvent)
+
+    def perform_draw_step(self) -> None:
+        """Draw a card for the active player."""
+        self._emit_step_event(TurnDrawStepEvent)
+
+    def _emit_step_event(self, event_type: type) -> None:
+        assert self.turn
+        self.turn._event_emitter.emit(event_type(self.turn))
