@@ -119,8 +119,7 @@ class Game:
 
 `turn.turn_number` and `turn.active_player` replace the previously planned `Game.current_player_index`/`Game.turn_number` fields. `Game` never stores a player index directly; it derives one with `self.players.index(self.turn.active_player)` wherever an index is needed (e.g. battlefield ownership, event-log entries, snapshots).
 
-The game does not store a `stack` attribute because lands are not cast as spells and never use the stack.
-
+The current implementation includes a shared `stack: Stack` attribute, but the lands-only MVP does not use it yet.
 ### Battlefield representation
 
 For the MVP, the battlefield is a single shared zone and consists only of lands. Each land record carries owner metadata so a snapshot can reconstruct who controls each permanent.
@@ -191,9 +190,8 @@ This is the state representation used for persistence and rehydration.
 The MVP turn flow is intentionally narrow and deterministic:
 
 1. `start_game()`
-   - validate exactly two players
+   - No player quantity validation
    - deal 7 cards to each player from the top of their deck
-   - set `self.turn = Turn(1, self.players[0])`
    - record setup log entries
 
 2. `perform_beginning_phase()`

@@ -63,8 +63,8 @@ class TestGame:
         assert len(player1.deck.get_cards()) == 13
         assert len(player2.deck.get_cards()) == 13
 
-        # Active player should not be none
-        assert game.turn.active_player is not None
+        # Active player should be first player (player1)
+        assert game.turn.active_player is player1
 
     def test_start_game_without_rng_parameter(self) -> None:
         """Test that start_game works without an explicit RNG parameter."""
