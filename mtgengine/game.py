@@ -3,6 +3,12 @@
 import random
 
 from mtgengine.player import Player
+from mtgengine.turn import (
+    Turn,
+    TurnDrawStepEvent,
+    TurnUntapStepEvent,
+    TurnUpkeepStepEvent,
+)
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.stack import Stack
 
@@ -26,13 +32,19 @@ class Game:
         """
         if not players:
             raise ValueError("A game must have at least one player")
-        self.players = players
-        self.battlefield = Battlefield()
-        self.stack = Stack()
-        self.current_player_index: int | None = None
-        self.turn_number = 1
+        self.players: list[Player] = players
+        self.battlefield: Battlefield = Battlefield()
+        self.stack: Stack = Stack()
+        self.current_player_index = 0
+        self.turn = Turn(1, self.players[self.current_player_index])
         for player in self.players:
             player.game = self
+
+        # Game state flags
+        self.is_game_over: bool = False
+        self.winner: Player | None = None
+        # Indexed event log: list of event dicts with sequential indices
+        self.event_log: list[dict[str, object]] = []
 
     def start_game(self, rng: random.Random | None = None) -> None:
         """Start the game: shuffle decks, deal 7 cards to each player, and select first player.
@@ -46,9 +58,6 @@ class Game:
         for player in self.players:
             player.deck.shuffle(rng)
 
-        self.current_player_index = 0
-        self.turn_number = 1
-
         # Deal 7 cards to each player
         for player in self.players:
             player.draw_from_deck(7)
@@ -61,9 +70,16 @@ class Game:
 
     def perform_untap_step(self) -> None:
         """Untap permanents controlled by the active player."""
+        self._emit_step_event(TurnUntapStepEvent)
 
     def perform_upkeep_step(self) -> None:
         """Resolve upkeep effects for the active player."""
+        self._emit_step_event(TurnUpkeepStepEvent)
 
     def perform_draw_step(self) -> None:
         """Draw a card for the active player."""
+        self._emit_step_event(TurnDrawStepEvent)
+
+    def _emit_step_event(self, event_type: type) -> None:
+        assert self.turn
+        self.turn._event_emitter.emit(event_type(self.turn))

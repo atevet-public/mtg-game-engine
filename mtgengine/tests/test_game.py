@@ -3,10 +3,12 @@
 import random
 
 import pytest
+from pyventus.events import EventLinker
 
 from mtgengine.card import Card
 from mtgengine.game import Game
 from mtgengine.player import Player
+from mtgengine.turn import TurnDrawStepEvent, TurnUntapStepEvent, TurnUpkeepStepEvent
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.stack import Stack
 
@@ -101,7 +103,7 @@ def test_start_game_sets_player_zero_active() -> None:
 
     game.start_game()
     assert game.current_player_index == 0
-    assert game.turn_number == 1
+    assert game.turn.turn_number == 1
 
 
 def test_game_has_shared_battlefield_zone() -> None:
@@ -117,20 +119,29 @@ def test_game_sets_player_game_reference() -> None:
     assert player2.game is game
 
 
-def test_perform_beginning_phase_calls_steps_in_order(monkeypatch) -> None:
+def test_beginning_phase_steps_emit_turn_events() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
-    calls: list[str] = []
+    received_events: list[TurnUntapStepEvent | TurnUpkeepStepEvent | TurnDrawStepEvent] = []
 
-    def make_step(name: str):
-        def _step() -> None:
-            calls.append(name)
-
-        return _step
-
-    monkeypatch.setattr(game, "perform_untap_step", make_step("untap"))
-    monkeypatch.setattr(game, "perform_upkeep_step", make_step("upkeep"))
-    monkeypatch.setattr(game, "perform_draw_step", make_step("draw"))
+    @EventLinker.on(TurnUntapStepEvent, TurnUpkeepStepEvent, TurnDrawStepEvent)
+    def handle_step_event(
+        event: TurnUntapStepEvent | TurnUpkeepStepEvent | TurnDrawStepEvent,
+    ) -> None:
+        received_events.append(event)
 
     game.perform_beginning_phase()
 
-    assert calls == ["untap", "upkeep", "draw"]
+    assert [type(event) for event in received_events] == [
+        TurnUntapStepEvent,
+        TurnUpkeepStepEvent,
+        TurnDrawStepEvent,
+    ]
+    assert all(event.turn.turn_number == 1 for event in received_events)
+    assert all(event.turn.active_player is game.players[0] for event in received_events)
+
+
+def test_game_state_flags_initialize() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    assert game.is_game_over is False
+    assert game.winner is None
+    assert game.event_log == []
