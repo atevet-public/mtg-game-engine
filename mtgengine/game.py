@@ -35,8 +35,7 @@ class Game:
         self.players: list[Player] = players
         self.battlefield: Battlefield = Battlefield()
         self.stack: Stack = Stack()
-        self.current_player_index = 0
-        self.turn = Turn(1, self.players[self.current_player_index])
+        self.turn = Turn(1, self.players[0])
         for player in self.players:
             player.game = self
 
