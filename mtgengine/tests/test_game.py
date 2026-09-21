@@ -63,9 +63,8 @@ class TestGame:
         assert len(player1.deck.get_cards()) == 13
         assert len(player2.deck.get_cards()) == 13
 
-        # Current player should be set to a valid index
-        assert game.current_player_index is not None
-        assert 0 <= game.current_player_index < len(game.players)
+        # Active player should not be none
+        assert game.turn.active_player is not None
 
     def test_start_game_without_rng_parameter(self) -> None:
         """Test that start_game works without an explicit RNG parameter."""
@@ -89,9 +88,8 @@ class TestGame:
         assert len(player1.hand.get_cards()) == 7
         assert len(player2.hand.get_cards()) == 7
 
-        # Current player should be set to a valid index
-        assert game.current_player_index is not None
-        assert 0 <= game.current_player_index < len(game.players)
+        # Active player should not be none
+        assert game.turn.active_player is not None
 
 
 def test_start_game_sets_player_zero_active() -> None:
@@ -102,7 +100,7 @@ def test_start_game_sets_player_zero_active() -> None:
             player.deck.add_card(Card("Forest", card_type="Land", owner_index=player_index))
 
     game.start_game()
-    assert game.current_player_index == 0
+    assert game.turn.active_player is game.players[0]
     assert game.turn.turn_number == 1
 
 

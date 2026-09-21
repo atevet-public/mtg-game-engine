@@ -47,6 +47,10 @@ Because a land is not a spell and does not use the stack, the MVP does not inclu
 
 Use the existing stateful-game pattern, with `Game` as the orchestrator and focused helper methods that mutate the world in a predictable order.
 
+Active-player and turn-number tracking live on `Turn`, not `Game`: `Game` holds a single `turn: Turn` attribute and replaces it wholesale when advancing to the next player/turn, rather than storing a separate `current_player_index` field. Anywhere an index is needed (battlefield ownership, event-log entries, snapshots), it is derived on demand with `self.players.index(self.turn.active_player)`.
+
+Each turn-phase/step `perform_*` method (untap, upkeep, draw, main phases, combat, cleanup) only emits the matching `Turn*Event` through `self.turn._event_emitter`. The actual rule behavior for that step lives in a paired private handler method (e.g. `_handle_untap_step`), registered once in `Game.__init__` via `EventLinker.on(EventType)(self._handle_x)`. This decouples "the turn clock ticked" from "what happens as a result," and matches the emitter/event pattern already used for `perform_beginning_phase`. `perform_play_land()` is the one exception: it's a direct player action, not a turn-clock tick, so it isn't wired through an event.
+
 This keeps the design close to the current repository structure while still allowing clean component-based PRs.
 
 ## API shape
@@ -107,12 +111,13 @@ These concerns are out of scope for the MVP, and they do not contribute to the r
 class Game:
     players: list[Player]
     battlefield: Battlefield
-    current_player_index: int
-    turn_number: int
+    turn: Turn
     is_game_over: bool
     winner: Player | None
     event_log: list[dict[str, Any]]
 ```
+
+`turn.turn_number` and `turn.active_player` replace the previously planned `Game.current_player_index`/`Game.turn_number` fields. `Game` never stores a player index directly; it derives one with `self.players.index(self.turn.active_player)` wherever an index is needed (e.g. battlefield ownership, event-log entries, snapshots).
 
 The game does not store a `stack` attribute because lands are not cast as spells and never use the stack.
 
@@ -139,8 +144,8 @@ The game state should be serialized as a JSON-friendly structure that includes:
 - graveyard contents for each player
 - exile contents for each player
 - shared battlefield contents as ordered land records with owner metadata
-- turn number
-- current player index
+- turn number (`self.turn.turn_number`)
+- current player index (`self.players.index(self.turn.active_player)`, computed at snapshot time, not stored on `Game`)
 - `is_game_over`
 - winner index if present
 - event log
@@ -188,8 +193,7 @@ The MVP turn flow is intentionally narrow and deterministic:
 1. `start_game()`
    - validate exactly two players
    - deal 7 cards to each player from the top of their deck
-   - set `current_player_index = 0`
-   - set `turn_number = 1`
+   - set `self.turn = Turn(1, self.players[0])`
    - record setup log entries
 
 2. `perform_beginning_phase()`
@@ -198,48 +202,49 @@ The MVP turn flow is intentionally narrow and deterministic:
    - call `perform_draw_step()`
 
 3. `perform_untap_step()`
-   - untap lands on the shared battlefield controlled by the active player
+   - emits `TurnUntapStepEvent`; the `_handle_untap_step` handler untaps lands on the shared battlefield controlled by `event.turn.active_player`
    - lands are always untapped in this MVP unless later work adds a tap state rule
 
 4. `perform_upkeep_step()`
-   - no-op for the lands-only MVP
+   - emits `TurnUpkeepStepEvent`; the `_handle_upkeep_step` handler is a no-op besides logging
 
 5. `perform_draw_step()`
-   - active player draws one card from the top of their deck
+   - emits `TurnDrawStepEvent`; the `_handle_draw_step` handler draws one card for the active player, logs the action, and checks for the empty-deck loss condition
    - if the deck is empty, the game ends immediately and the active player loses
    - all actions are logged as structured events
 
 6. `perform_first_main_phase()`
-   - active player may play one land per turn if they have one in hand
+   - emits `TurnPrecombatMainPhaseEvent`; the `_handle_first_main_phase` handler calls `perform_play_land()` if the active player has a land in hand
    - the MVP does not implement full land-per-turn timing rules beyond the basic “play a land if available” behavior
-   - implemented as a helper that moves the top land from hand to battlefield
 
 7. `perform_play_land()`
+   - a direct player action (not event-driven, since it's not a turn-clock tick)
    - deletes the top land from hand
    - appends a new land record to the shared battlefield
    - always marks it untapped
-   - owner is the active player
+   - owner is `self.players.index(self.turn.active_player)`
 
 8. `perform_combat_phase()`
-   - no-op for the lands-only MVP
+   - emits `TurnCombatPhaseEvent`; the `_handle_combat_phase` handler is a no-op besides logging
 
 9. `perform_second_main_phase()`
-   - no-op for the lands-only MVP
+   - emits `TurnPostcombatMainPhaseEvent`; the `_handle_second_main_phase` handler is a no-op besides logging
 
 10. `perform_cleanup_step()`
-    - no-op for the lands-only MVP
+    - emits `TurnCleanupStepEvent`; the `_handle_cleanup_step` handler is a no-op besides logging
 
 11. End-of-turn flow
-    - after both players complete a cycle, `turn_number` increments
-    - `current_player_index` changes to the next active player
+    - `advance_to_next_player()` replaces `self.turn` with a new `Turn` for the next active player, incrementing `turn_number` once both players have completed a cycle
     - the game continues until an empty-deck draw ends the game
 
 Turn counter semantics:
 
-- `turn_number` starts at 1
+- `turn.turn_number` starts at 1
 - player 0 acts during turn 1
-- after player 0 ends turn 1, `current_player_index` becomes 1 and `turn_number` still remains 1
-- after player 1 ends turn 1, the cycle completes and `turn_number` becomes 2
+- after player 0 ends turn 1, `self.turn` is replaced with `Turn(1, players[1])`
+- after player 1 ends turn 1, the cycle completes and `self.turn` is replaced with `Turn(2, players[0])`
+
+Event handlers are registered once in `Game.__init__`, e.g. `EventLinker.on(TurnUntapStepEvent)(self._handle_untap_step)`, so they fire regardless of which `Turn` instance emits the event.
 
 This matches the rule that the turn counter increments after each player has completed a turn within the cycle.
 
@@ -299,17 +304,17 @@ Responsibilities:
 
 - check that the active player has a land in hand
 - move the top land from hand to battlefield
-- create a battlefield land record with `owner_index = current_player_index`
+- create a battlefield land record with `owner_index = self.players.index(self.turn.active_player)`
 - mark it as untapped
 - log the action
 
-### `perform_first_main_phase()`
+### `perform_first_main_phase()` / `_handle_first_main_phase()`
 
-Responsibilities:
+`perform_first_main_phase()` emits `TurnPrecombatMainPhaseEvent`. The paired `_handle_first_main_phase()` handler is responsible for:
 
-- call `perform_play_land()` if a land exists in hand
-- do nothing if a land does not exist
-- log the turn-phase state and the action taken
+- calling `perform_play_land()` if a land exists in hand
+- doing nothing if a land does not exist
+- logging the turn-phase state and the action taken
 
 ## PR decomposition
 
@@ -373,8 +378,8 @@ This design deliberately chooses the smallest workable engine model:
 - no poison counters
 - no player activity flags
 - shared battlefield zone (not per-player battlefield)
-- consistent `player_index` keys across battlefield owner fields and event-log player references
-- explicit `perform_*` methods
+- consistent `player_index` keys across battlefield owner fields and event-log player references, always derived via `self.players.index(self.turn.active_player)` rather than stored separately
+- explicit `perform_*` methods that emit `Turn*Event`s, with rule behavior implemented in paired `_handle_*` event handlers registered in `Game.__init__`
 - battlefield lands with owner metadata
 - deterministic two-player turn flow
 - save/load through a snapshot format built around ordered zone state

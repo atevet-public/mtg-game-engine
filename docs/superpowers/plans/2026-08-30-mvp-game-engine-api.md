@@ -30,7 +30,7 @@
 
 ---
 
-### Task 1 (PR-01): Move battlefield to shared `Game` zone
+### Task 1 (PR-01): Move battlefield to shared `Game` zone — DONE (merged)
 
 **Files:**
 - Modify: `mtgengine/player.py`
@@ -38,7 +38,7 @@
 - Test: `mtgengine/tests/test_player.py`
 - Test: `mtgengine/tests/test_game.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 ```python
 def test_player_does_not_own_battlefield_zone() -> None:
     player = Player("Alice", 20)
@@ -69,62 +69,64 @@ class Player:
 self.battlefield = Battlefield()
 ```
 
-- [ ] **Step 4: Re-run tests**
+- [x] **Step 4: Re-run tests**
 Run: same pytest command  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add mtgengine/player.py mtgengine/game.py mtgengine/tests/test_player.py mtgengine/tests/test_game.py
 git commit -m "refactor: make battlefield a shared game zone"
 ```
 
-### Task 2 (PR-02): Deterministic start-game setup
+### Task 2 (PR-02): Deterministic start-game setup — DONE (merged; active player now tracked via `Turn`, not a stored index)
 
 **Files:**
 - Modify: `mtgengine/game.py`
 - Test: `mtgengine/tests/test_game.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 ```python
 def test_start_game_sets_player_zero_active() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     # preload 60 lands in each deck
     game.start_game()
-    assert game.current_player_index == 0
-    assert game.turn_number == 1
+    assert game.turn.active_player is game.players[0]
+    assert game.turn.turn_number == 1
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 Run: `pytest mtgengine/tests/test_game.py::test_start_game_sets_player_zero_active -v`  
 Expected: FAIL
 
-- [ ] **Step 3: Implement minimal code**
+- [x] **Step 3: Implement minimal code**
 ```python
-def start_game(self) -> None:
-    self.current_player_index = 0
-    self.turn_number = 1
+def start_game(self, rng: random.Random | None = None) -> None:
+    rng = rng or random.Random()
+    for player in self.players:
+        player.deck.shuffle(rng)
     for player in self.players:
         player.draw_from_deck(7)
 ```
+Note: `self.turn = Turn(1, self.players[0])` is set once in `Game.__init__`, not in `start_game()`.
 
-- [ ] **Step 4: Re-run test**
+- [x] **Step 4: Re-run test**
 Run: same pytest command  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
 git commit -m "feat: add deterministic start_game setup"
 ```
 
-### Task 3 (PR-03): Add `is_game_over`, winner tracking, and indexed event log
+### Task 3 (PR-03): Add `is_game_over`, winner tracking, and indexed event log — DONE (merged)
 
 **Files:**
 - Modify: `mtgengine/game.py`
 - Test: `mtgengine/tests/test_game.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 ```python
 def test_game_state_flags_initialize() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
@@ -144,23 +146,23 @@ self.winner = None
 self.event_log: list[dict[str, object]] = []
 ```
 
-- [ ] **Step 4: Re-run test**
+- [x] **Step 4: Re-run test**
 Run: same pytest command  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
 git commit -m "feat: initialize game-over flags and event log"
 ```
 
-### Task 4 (PR-04): Implement `perform_beginning_phase`
+### Task 4 (PR-04): Implement `perform_beginning_phase` — DONE (merged; establishes the emit-only step pattern used by later tasks)
 
 **Files:**
 - Modify: `mtgengine/game.py`
 - Test: `mtgengine/tests/test_game.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 ```python
 def test_perform_beginning_phase_calls_steps_in_order(mocker) -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
@@ -185,17 +187,19 @@ def perform_beginning_phase(self) -> None:
     self.perform_draw_step()
 ```
 
-- [ ] **Step 4: Re-run test**
+- [x] **Step 4: Re-run test**
 Run: same pytest command  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
 git commit -m "feat: add perform_beginning_phase orchestration"
 ```
 
-### Task 5 (PR-05): Implement `perform_untap_step`
+Actual implementation note: `perform_untap_step`/`perform_upkeep_step`/`perform_draw_step` each just call `self._emit_step_event(EventType)`, which emits `EventType(self.turn)` through `self.turn._event_emitter`. Tasks 5-9 below assume this emit-only shape plus paired `_handle_*` event handlers, rather than inline logic in the `perform_*` methods.
+
+### Task 5 (PR-05): Implement `perform_untap_step` via `_handle_untap_step` event handler
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -204,8 +208,7 @@ git commit -m "feat: add perform_beginning_phase orchestration"
 - [ ] **Step 1: Write failing test**
 ```python
 def test_perform_untap_step_only_untaps_active_players_lands() -> None:
-    game = seeded_game_with_lands_on_battlefield()
-    game.current_player_index = 0
+    game = seeded_game_with_lands_on_battlefield()  # lands belong to game.turn.active_player
     game.perform_untap_step()
     assert all(not land.tapped for land in active_player_lands(game))
 ```
@@ -216,10 +219,16 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement minimal code**
 ```python
-def perform_untap_step(self) -> None:
+# perform_untap_step already exists as: self._emit_step_event(TurnUntapStepEvent)
+
+def _handle_untap_step(self, event: TurnUntapStepEvent) -> None:
+    active_index = self.players.index(event.turn.active_player)
     for permanent in self.battlefield.get_cards():
-        if permanent.owner_index == self.current_player_index:
+        if permanent.owner_index == active_index:
             permanent.untap()
+
+# In Game.__init__:
+EventLinker.on(TurnUntapStepEvent)(self._handle_untap_step)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -229,10 +238,10 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_untap_step for active player permanents"
+git commit -m "feat: add untap-step handler for active player permanents"
 ```
 
-### Task 6 (PR-06): Implement `perform_upkeep_step` as no-op with log
+### Task 6 (PR-06): Implement `_handle_upkeep_step` as no-op with log
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -252,8 +261,16 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement minimal code**
 ```python
-def perform_upkeep_step(self) -> None:
-    self.event_log.append({"type": "upkeep_step", "player_index": self.current_player_index})
+# perform_upkeep_step already exists as: self._emit_step_event(TurnUpkeepStepEvent)
+
+def _handle_upkeep_step(self, event: TurnUpkeepStepEvent) -> None:
+    self.event_log.append({
+        "type": "upkeep_step",
+        "player_index": self.players.index(event.turn.active_player),
+    })
+
+# In Game.__init__:
+EventLinker.on(TurnUpkeepStepEvent)(self._handle_upkeep_step)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -263,7 +280,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_upkeep_step no-op behavior"
+git commit -m "feat: add upkeep-step no-op logging handler"
 ```
 
 ### Task 7 (PR-07): Implement `draw_card_from_deck`
@@ -278,7 +295,7 @@ def test_draw_card_from_deck_moves_top_card_to_hand() -> None:
     game = seeded_game()
     card = game.draw_card_from_deck()
     assert card is not None
-    assert card in game.players[game.current_player_index].hand.get_cards()
+    assert card in game.turn.active_player.hand.get_cards()
 ```
 
 - [ ] **Step 2: Run test to verify failure**
@@ -288,7 +305,7 @@ Expected: FAIL
 - [ ] **Step 3: Implement minimal code**
 ```python
 def draw_card_from_deck(self) -> Card | None:
-    player = self.players[self.current_player_index]
+    player = self.turn.active_player
     cards = player.deck.draw(1) if player.deck.get_cards() else []
     if not cards:
         return None
@@ -296,6 +313,7 @@ def draw_card_from_deck(self) -> Card | None:
     player.hand.add_card(card)
     return card
 ```
+This helper is a plain method (not event-driven) since it's called directly from `_handle_draw_step`.
 
 - [ ] **Step 4: Re-run test**
 Run: same pytest command  
@@ -316,7 +334,7 @@ git commit -m "feat: add draw_card_from_deck helper"
 - [ ] **Step 1: Write failing test**
 ```python
 def test_check_for_empty_deck_loss_sets_game_outcome() -> None:
-    game = empty_deck_game(current_player_index=0)
+    game = empty_deck_game()  # empty deck belongs to game.turn.active_player
     did_lose = game.check_for_empty_deck_loss()
     assert did_lose is True
     assert game.is_game_over is True
@@ -331,13 +349,14 @@ Expected: FAIL
 ```python
 def check_for_empty_deck_loss(self) -> bool:
     # pseudo-code
-    # if the deck is empty and the player would draw a card
+    # if the active player's deck is empty and they would draw a card
     #   Record the loss
     #   Update state to reflect the winner
     #   return True
     # else
     #   return False
 ```
+This is a plain method (not event-driven) so it stays independently testable.
 
 - [ ] **Step 4: Re-run test**
 Run: same pytest command  
@@ -349,7 +368,7 @@ git add mtgengine/game.py mtgengine/tests/test_game.py
 git commit -m "feat: add empty-library loss rule helper"
 ```
 
-### Task 9 (PR-09): Implement `perform_draw_step`
+### Task 9 (PR-09): Implement `_handle_draw_step` event handler
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -363,7 +382,7 @@ def test_perform_draw_step_draws_or_ends_game(mocker) -> None:
     loss = mocker.patch.object(game, "check_for_empty_deck_loss", return_value=True)
     game.perform_draw_step()
     draw.assert_called_once()
-    loss.assert_called_once_with(draw_succeeded=False)
+    loss.assert_called_once()
 ```
 
 - [ ] **Step 2: Run test to verify failure**
@@ -372,10 +391,18 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement minimal code**
 ```python
-def perform_draw_step(self) -> None:
-    card = self.draw_card_from_deck()
-    self.event_log.append({"type": "draw_step", "player_index": self.current_player_index})
+# perform_draw_step already exists as: self._emit_step_event(TurnDrawStepEvent)
+
+def _handle_draw_step(self, event: TurnDrawStepEvent) -> None:
+    self.draw_card_from_deck()
+    self.event_log.append({
+        "type": "draw_step",
+        "player_index": self.players.index(event.turn.active_player),
+    })
     self.check_for_empty_deck_loss()
+
+# In Game.__init__:
+EventLinker.on(TurnDrawStepEvent)(self._handle_draw_step)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -385,7 +412,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_draw_step behavior"
+git commit -m "feat: add draw-step handler"
 ```
 
 ### Task 10 (PR-10): Implement `perform_play_land`
@@ -399,9 +426,10 @@ git commit -m "feat: add perform_draw_step behavior"
 ```python
 def test_perform_play_land_moves_top_land_to_shared_battlefield() -> None:
     game = seeded_game()
+    active_index = game.players.index(game.turn.active_player)
     played = game.perform_play_land()
     assert played is True
-    assert game.battlefield.get_cards()[-1].owner_index == game.current_player_index
+    assert game.battlefield.get_cards()[-1].owner_index == active_index
     assert game.battlefield.get_cards()[-1].tapped is False
 ```
 
@@ -412,18 +440,22 @@ Expected: FAIL
 - [ ] **Step 3: Implement minimal code**
 ```python
 def perform_play_land(self) -> bool:
-    player = self.players[self.current_player_index]
+    player = self.turn.active_player
     hand_cards = player.hand.get_cards()
     if not hand_cards:
         return False
     land = hand_cards[-1]
     player.hand.remove_card(land)
-    land.owner_index = self.current_player_index
+    land.owner_index = self.players.index(player)
     land.tapped = False
     self.battlefield.add_card(land)
-    self.event_log.append({"type": "play_land", "player_index": self.current_player_index})
+    self.event_log.append({
+        "type": "play_land",
+        "player_index": self.players.index(player),
+    })
     return True
 ```
+This is a direct player-action method, not routed through the Turn event emitter.
 
 - [ ] **Step 4: Re-run test**
 Run: same pytest command  
@@ -435,7 +467,7 @@ git add mtgengine/game.py mtgengine/card.py mtgengine/tests/test_game.py
 git commit -m "feat: add perform_play_land helper"
 ```
 
-### Task 11 (PR-11): Implement `perform_first_main_phase`
+### Task 11 (PR-11): Implement `_handle_first_main_phase` event handler
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -457,8 +489,17 @@ Expected: FAIL
 - [ ] **Step 3: Implement minimal code**
 ```python
 def perform_first_main_phase(self) -> None:
+    self._emit_step_event(TurnPrecombatMainPhaseEvent)
+
+def _handle_first_main_phase(self, event: TurnPrecombatMainPhaseEvent) -> None:
     self.perform_play_land()
-    self.event_log.append({"type": "first_main_phase", "player_index": self.current_player_index})
+    self.event_log.append({
+        "type": "first_main_phase",
+        "player_index": self.players.index(event.turn.active_player),
+    })
+
+# In Game.__init__:
+EventLinker.on(TurnPrecombatMainPhaseEvent)(self._handle_first_main_phase)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -468,10 +509,10 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_first_main_phase automation"
+git commit -m "feat: add first-main-phase handler"
 ```
 
-### Task 12 (PR-12): Implement `perform_combat_phase` no-op
+### Task 12 (PR-12): Implement `_handle_combat_phase` no-op
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -492,7 +533,16 @@ Expected: FAIL
 - [ ] **Step 3: Implement minimal code**
 ```python
 def perform_combat_phase(self) -> None:
-    self.event_log.append({"type": "combat_phase", "player_index": self.current_player_index})
+    self._emit_step_event(TurnCombatPhaseEvent)
+
+def _handle_combat_phase(self, event: TurnCombatPhaseEvent) -> None:
+    self.event_log.append({
+        "type": "combat_phase",
+        "player_index": self.players.index(event.turn.active_player),
+    })
+
+# In Game.__init__:
+EventLinker.on(TurnCombatPhaseEvent)(self._handle_combat_phase)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -502,10 +552,10 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_combat_phase no-op"
+git commit -m "feat: add combat-phase no-op logging handler"
 ```
 
-### Task 13 (PR-13): Implement `perform_second_main_phase` no-op
+### Task 13 (PR-13): Implement `_handle_second_main_phase` no-op
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -526,7 +576,16 @@ Expected: FAIL
 - [ ] **Step 3: Implement minimal code**
 ```python
 def perform_second_main_phase(self) -> None:
-    self.event_log.append({"type": "second_main_phase", "player_index": self.current_player_index})
+    self._emit_step_event(TurnPostcombatMainPhaseEvent)
+
+def _handle_second_main_phase(self, event: TurnPostcombatMainPhaseEvent) -> None:
+    self.event_log.append({
+        "type": "second_main_phase",
+        "player_index": self.players.index(event.turn.active_player),
+    })
+
+# In Game.__init__:
+EventLinker.on(TurnPostcombatMainPhaseEvent)(self._handle_second_main_phase)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -536,10 +595,10 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_second_main_phase no-op"
+git commit -m "feat: add second-main-phase no-op logging handler"
 ```
 
-### Task 14 (PR-14): Implement `perform_cleanup_step` no-op
+### Task 14 (PR-14): Implement `_handle_cleanup_step` no-op
 
 **Files:**
 - Modify: `mtgengine/game.py`
@@ -560,7 +619,16 @@ Expected: FAIL
 - [ ] **Step 3: Implement minimal code**
 ```python
 def perform_cleanup_step(self) -> None:
-    self.event_log.append({"type": "cleanup_step", "player_index": self.current_player_index})
+    self._emit_step_event(TurnCleanupStepEvent)
+
+def _handle_cleanup_step(self, event: TurnCleanupStepEvent) -> None:
+    self.event_log.append({
+        "type": "cleanup_step",
+        "player_index": self.players.index(event.turn.active_player),
+    })
+
+# In Game.__init__:
+EventLinker.on(TurnCleanupStepEvent)(self._handle_cleanup_step)
 ```
 
 - [ ] **Step 4: Re-run test**
@@ -570,7 +638,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 ```bash
 git add mtgengine/game.py mtgengine/tests/test_game.py
-git commit -m "feat: add perform_cleanup_step no-op"
+git commit -m "feat: add cleanup-step no-op logging handler"
 ```
 
 ### Task 15 (PR-15): Implement `advance_to_next_player`
@@ -581,36 +649,34 @@ git commit -m "feat: add perform_cleanup_step no-op"
 
 - [ ] **Step 1: Write failing tests**
 ```python
-def test_advance_to_next_player_switches_index() -> None:
-    game = seeded_game()
-    game.current_player_index = 0
-    game.turn_number = 1
+def test_advance_to_next_player_switches_active_player() -> None:
+    game = seeded_game()  # starts with game.turn = Turn(1, game.players[0])
     game.advance_to_next_player()
-    assert game.current_player_index == 1
-    assert game.turn_number == 1
+    assert game.turn.active_player is game.players[1]
+    assert game.turn.turn_number == 1
 
 def test_advance_to_next_player_wraps_and_increments_turn_cycle() -> None:
     game = seeded_game()
-    game.current_player_index = 1
-    game.turn_number = 1
+    game.turn = Turn(1, game.players[1])
     game.advance_to_next_player()
-    assert game.current_player_index == 0
-    assert game.turn_number == 2
+    assert game.turn.active_player is game.players[0]
+    assert game.turn.turn_number == 2
 ```
 
 - [ ] **Step 2: Run tests to verify failure**
-Run: `pytest mtgengine/tests/test_game.py::test_advance_to_next_player_switches_index mtgengine/tests/test_game.py::test_advance_to_next_player_wraps_and_increments_turn_cycle -v`  
+Run: `pytest mtgengine/tests/test_game.py::test_advance_to_next_player_switches_active_player mtgengine/tests/test_game.py::test_advance_to_next_player_wraps_and_increments_turn_cycle -v`  
 Expected: FAIL
 
 - [ ] **Step 3: Implement minimal code**
 ```python
 def advance_to_next_player(self) -> None:
-    if self.current_player_index == len(self.players) - 1:
-        self.current_player_index = 0
-        self.turn_number += 1
+    current_index = self.players.index(self.turn.active_player)
+    if current_index == len(self.players) - 1:
+        self.turn = Turn(self.turn.turn_number + 1, self.players[0])
     else:
-        self.current_player_index += 1
+        self.turn = Turn(self.turn.turn_number, self.players[current_index + 1])
 ```
+This replaces `self.turn` wholesale rather than mutating a stored index; `Turn` remains the single source of truth for turn number and active player.
 
 - [ ] **Step 4: Re-run tests**
 Run: same pytest command  
@@ -690,7 +756,7 @@ def test_snapshot_contains_shared_battlefield_and_owner_index() -> None:
     game.perform_play_land()
     snapshot = game.snapshot()
     assert "battlefield" in snapshot
-    assert snapshot["battlefield"][-1]["owner_index"] == game.current_player_index
+    assert snapshot["battlefield"][-1]["owner_index"] == game.players.index(game.turn.active_player)
 
 def test_json_round_trip_rebuilds_state() -> None:
     game = seeded_game()
@@ -707,8 +773,8 @@ Expected: FAIL
 ```python
 def snapshot(self) -> dict[str, object]:
     return {
-        "turn_number": self.turn_number,
-        "current_player_index": self.current_player_index,
+        "turn_number": self.turn.turn_number,
+        "current_player_index": self.players.index(self.turn.active_player),
         "is_game_over": self.is_game_over,
         "winner_index": None if self.winner is None else self.players.index(self.winner),
         "players": [
@@ -793,4 +859,9 @@ git commit -m "test: verify end-to-end MVP game lifecycle to empty-library loss"
 
 - **Spec coverage:** Covered shared battlefield, indexed player references, deterministic player-0 start, `perform_*` method naming, separated draw/loss/play-land/main-phase PRs, cycle-based turn increment semantics, and snapshot persistence.
 - **Placeholder scan:** Removed TBD/TODO placeholders from implementation tasks.  
-- **Type consistency:** Kept `is_game_over`, `current_player_index`, and `winner_index` naming consistent with the approved spec.
+- **Type consistency:** Kept `is_game_over`, `current_player_index` (derived, not stored), and `winner_index` naming consistent with the approved spec.
+
+## Update log
+
+- **2026-09-21:** `Game.current_player_index` was removed; active-player and turn-number tracking now live entirely on `Turn` (`game.turn.active_player`, `game.turn.turn_number`). Tasks 1-4 marked complete to match merged PRs, and Tasks 5-18 were rewritten to derive a player index via `self.players.index(self.turn.active_player)` wherever one is needed, and `advance_to_next_player` now replaces `self.turn` with a new `Turn` instead of mutating a stored index.
+- **2026-09-21:** Folded in the event-emitter architecture actually used for `perform_beginning_phase`: each turn-phase/step `perform_*` method only emits its `Turn*Event` via `self._emit_step_event(...)`; rule behavior for untap/upkeep/draw/first-main/combat/second-main/cleanup now lives in paired `_handle_*` methods registered once in `Game.__init__` via `EventLinker.on(EventType)(self._handle_x)`. `perform_play_land()` remains a direct, non-event method since it's a player action rather than a turn-clock tick.
