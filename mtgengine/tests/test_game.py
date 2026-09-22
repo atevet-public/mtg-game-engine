@@ -159,3 +159,12 @@ def test_perform_untap_step_only_untaps_active_players_lands() -> None:
 
     assert active_land.tapped is False
     assert inactive_land.tapped is True
+
+
+def test_perform_upkeep_step_logs_event() -> None:
+    """Log the active player's upkeep step."""
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+
+    game.perform_upkeep_step()
+
+    assert game.event_log[-1] == {"type": "upkeep_step", "player_index": 0}
