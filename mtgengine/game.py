@@ -41,6 +41,7 @@ class Game:
         for player in self.players:
             player.game = self
         EventLinker.on(TurnUntapStepEvent)(self._handle_untap_step)
+        EventLinker.on(TurnUpkeepStepEvent)(self._handle_upkeep_step)
 
         # Game state flags
         self.is_game_over: bool = False
@@ -84,6 +85,15 @@ class Game:
     def perform_upkeep_step(self) -> None:
         """Resolve upkeep effects for the active player."""
         self._emit_step_event(TurnUpkeepStepEvent)
+
+    def _handle_upkeep_step(self, event: TurnUpkeepStepEvent) -> None:
+        """Log the active player's upkeep step."""
+        self.event_log.append(
+            {
+                "type": "upkeep_step",
+                "player_index": self.players.index(event.turn.active_player),
+            }
+        )
 
     def perform_draw_step(self) -> None:
         """Draw a card for the active player."""
