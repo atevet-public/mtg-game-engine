@@ -4,6 +4,7 @@ import random
 
 from pyventus.events import EventLinker
 
+from mtgengine.card import Card
 from mtgengine.player import Player
 from mtgengine.turn import (
     Turn,
@@ -98,6 +99,15 @@ class Game:
     def perform_draw_step(self) -> None:
         """Draw a card for the active player."""
         self._emit_step_event(TurnDrawStepEvent)
+
+    def draw_card_from_deck(self) -> Card | None:
+        """Draw the active player's top card into their hand."""
+        player = self.turn.active_player
+        if not player.deck.get_cards():
+            return None
+        card = player.deck.draw(1)[0]
+        player.hand.add_card(card)
+        return card
 
     def _emit_step_event(self, event_type: type) -> None:
         assert self.turn
