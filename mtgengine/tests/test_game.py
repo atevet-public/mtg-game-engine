@@ -168,3 +168,37 @@ def test_perform_upkeep_step_logs_event() -> None:
     game.perform_upkeep_step()
 
     assert game.event_log[-1] == {"type": "upkeep_step", "player_index": 0}
+
+
+def test_draw_card_from_deck_moves_top_card_to_hand() -> None:
+    """Draw the active player's top deck card into their hand."""
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    card = Card("Forest", card_type="Land", owner_index=0)
+    game.turn.active_player.deck.add_card(card)
+
+    drawn_card = game.draw_card_from_deck()
+
+    assert drawn_card is card
+    assert card in game.turn.active_player.hand.get_cards()
+    assert card not in game.turn.active_player.deck.get_cards()
+
+
+def test_draw_card_from_deck_returns_none_if_deck_empty() -> None:
+    """Return None if the active player's deck is empty."""
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+
+    drawn_card = game.draw_card_from_deck()
+
+    assert drawn_card is None
+
+
+def test_perform_draw_step_draws_card_from_deck() -> None:
+    """Performing the draw step should draw a card from the active player's deck."""
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    card = Card("Forest", card_type="Land", owner_index=0)
+    game.turn.active_player.deck.add_card(card)
+
+    game.perform_draw_step()
+
+    assert card in game.turn.active_player.hand.get_cards()
+    assert card not in game.turn.active_player.deck.get_cards()
