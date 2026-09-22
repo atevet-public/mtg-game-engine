@@ -143,3 +143,19 @@ def test_game_state_flags_initialize() -> None:
     assert game.is_game_over is False
     assert game.winner is None
     assert game.event_log == []
+
+
+def test_perform_untap_step_only_untaps_active_players_lands() -> None:
+    """Untap only the active player's lands on the shared battlefield."""
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    active_land = Card("Forest", card_type="Land", owner_index=0)
+    inactive_land = Card("Island", card_type="Land", owner_index=1)
+    active_land.tap()
+    inactive_land.tap()
+    game.battlefield.add_card(active_land)
+    game.battlefield.add_card(inactive_land)
+
+    game.perform_untap_step()
+
+    assert active_land.tapped is False
+    assert inactive_land.tapped is True

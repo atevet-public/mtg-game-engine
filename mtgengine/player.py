@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyventus.events import EventLinker
-
-from mtgengine.turn import TurnUntapStepEvent
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
@@ -14,27 +11,6 @@ from mtgengine.zone.hand import Hand
 
 if TYPE_CHECKING:
     from mtgengine.game import Game
-
-
-@EventLinker.on(TurnUntapStepEvent)
-def handle_untap_step(event: TurnUntapStepEvent) -> None:
-    """Handle untap by untapping only active player's shared-battlefield permanents.
-
-    Args:
-        event: The turn untap step event containing the turn and active player.
-    """
-    active_player = event.turn.active_player
-    assert active_player is not None
-
-    if active_player.game is None:
-        raise AttributeError("Active player has no game attached.")
-    try:
-        active_player_index = active_player.game.players.index(active_player)
-    except ValueError:
-        return
-    for permanent in active_player.game.battlefield.get_cards():
-        if permanent.owner_index == active_player_index:
-            permanent.untap()
 
 
 class Player:

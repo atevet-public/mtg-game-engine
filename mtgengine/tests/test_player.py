@@ -5,7 +5,7 @@ from pyventus.events import AsyncIOEventEmitter
 
 from mtgengine.card import Card
 from mtgengine.game import Game
-from mtgengine.player import Player, handle_untap_step
+from mtgengine.player import Player
 from mtgengine.turn import TurnUntapStepEvent
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
@@ -71,26 +71,6 @@ class TestPlayer:
 
         assert active_permanent.tapped is False
         assert non_active_permanent.tapped is True
-
-    def test_player_untap_step_raises_when_active_player_has_no_game(self) -> None:
-        """Test that untap handling raises an error with no attached game."""
-        active_player = Player("Active", 20)
-        turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
-        event = TurnUntapStepEvent(turn)
-
-        with pytest.raises(AttributeError):
-            handle_untap_step(event)
-
-    def test_player_untap_step_noops_when_active_player_not_in_game_players(self) -> None:
-        """Test untap handling safely no-ops if active player is not indexed in game."""
-        active_player = Player("Active", 20)
-        game_player = Player("In Game", 20)
-        game = Game([game_player])
-        active_player.game = game
-        turn = type("TurnStub", (), {"active_player": active_player, "turn_number": 1})()
-        event = TurnUntapStepEvent(turn)
-
-        handle_untap_step(event)
 
 
 def test_player_does_not_own_battlefield_zone() -> None:
