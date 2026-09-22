@@ -43,6 +43,7 @@ class Game:
             player.game = self
         EventLinker.on(TurnUntapStepEvent)(self._handle_untap_step)
         EventLinker.on(TurnUpkeepStepEvent)(self._handle_upkeep_step)
+        EventLinker.on(TurnDrawStepEvent)(self._handle_draw_step)
 
         # Game state flags
         self.is_game_over: bool = False
@@ -99,6 +100,10 @@ class Game:
     def perform_draw_step(self) -> None:
         """Draw a card for the active player."""
         self._emit_step_event(TurnDrawStepEvent)
+
+    def _handle_draw_step(self, event: TurnDrawStepEvent) -> None:
+        """Draw a card for the active player during the draw step."""
+        self.draw_card_from_deck()
 
     def draw_card_from_deck(self) -> Card | None:
         """Draw the active player's top card into their hand."""
