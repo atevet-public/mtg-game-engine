@@ -1,7 +1,8 @@
 """MTG Game Engine package."""
 
 from mtgengine.card import Card
-from mtgengine.game import Game
+from mtgengine.decklist import DecklistEntry, parse_decklist
+from mtgengine.game import Game, GameResult, PlayerSpecification
 from mtgengine.mana_cost import ManaCost
 from mtgengine.player import Player
 from mtgengine.zone import Zone
@@ -16,12 +17,16 @@ __all__ = [
     "Battlefield",
     "Card",
     "Deck",
+    "DecklistEntry",
     "Exile",
     "Game",
+    "GameResult",
     "Graveyard",
     "Hand",
     "ManaCost",
     "Player",
+    "PlayerSpecification",
     "Stack",
     "Zone",
+    "parse_decklist",
 ]
