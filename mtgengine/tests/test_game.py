@@ -60,8 +60,8 @@ class TestGame:
         game = Game([player1, player2])
 
         # Use a seeded RNG for deterministic testing
-        rng = random.Random(42)
-        game.start_game(rng=rng)
+        game._rng = random.Random(42)
+        game.start_game()
 
         # Each player should have 7 cards in hand
         assert len(player1.hand.get_cards()) == 7
@@ -119,7 +119,8 @@ def test_start_game_selects_and_logs_the_starting_player_before_opening_draws() 
                 Card(f"Player {player_index} card {card_number}", "Land", player_index)
             )
 
-    game.start_game(SelectSecondPlayerRandom())
+    game._rng = SelectSecondPlayerRandom()
+    game.start_game()
 
     assert game.turn.active_player is game.players[1]
     assert game.event_log[0] == {"type": "starting_player", "player_index": 1}
@@ -242,7 +243,8 @@ def test_starting_player_skips_their_first_draw_step_only() -> None:
             player.deck.add_card(
                 Card(f"Player {player_index} card {card_number}", "Land", player_index)
             )
-    game.start_game(SelectSecondPlayerRandom())
+    game._rng = SelectSecondPlayerRandom()
+    game.start_game()
     starting_hand_size = len(game.players[1].hand.get_cards())
 
     game.perform_draw_step()
@@ -403,7 +405,8 @@ def test_turn_number_increments_only_after_both_players_complete_a_cycle() -> No
             player.deck.add_card(
                 Card(f"Player {player_index} card {card_number}", "Land", player_index)
             )
-    game.start_game(SelectSecondPlayerRandom())
+    game._rng = SelectSecondPlayerRandom()
+    game.start_game()
 
     game.advance_to_next_player()
     assert game.turn.active_player is game.players[0]

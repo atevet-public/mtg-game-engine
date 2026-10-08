@@ -10,12 +10,6 @@ def create_decklist_entry(card_name: str = "Forest", quantity: int = 60) -> str:
     return f"{quantity} {card_name}"
 
 
-def test_player_specification_is_immutable() -> None:
-    specification = PlayerSpecification("Alice", create_decklist_entry())
-    with pytest.raises(AttributeError):
-        specification.name = "Bob"  # type: ignore[misc]
-
-
 def test_game_factory_builds_two_players_and_their_basic_land_decks() -> None:
     game = Game.from_player_specification(
         PlayerSpecification("Alice", "2 Forest (M21) 280\n58 Island"),

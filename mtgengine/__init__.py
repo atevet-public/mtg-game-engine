@@ -2,9 +2,11 @@
 
 from mtgengine.card import Card
 from mtgengine.decklist import DecklistEntry, parse_decklist
-from mtgengine.game import Game, GameResult, PlayerSpecification
+from mtgengine.game import Game
+from mtgengine.game_result import GameResult
 from mtgengine.mana_cost import ManaCost
 from mtgengine.player import Player
+from mtgengine.player_specification import PlayerSpecification
 from mtgengine.zone import Zone
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.deck import Deck

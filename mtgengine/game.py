@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
 
 from pyventus.events import EventLinker
 
+from mtgengine import decklist_validator
 from mtgengine.card import Card
 from mtgengine.decklist import DecklistEntry, parse_decklist
+from mtgengine.game_result import GameResult
 from mtgengine.player import Player
+from mtgengine.player_specification import PlayerSpecification
 from mtgengine.turn import (
     Turn,
     TurnCleanupStepEvent,
@@ -22,24 +24,6 @@ from mtgengine.turn import (
 )
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.stack import Stack
-
-
-@dataclass(frozen=True)
-class PlayerSpecification:
-    """Input required to create one player and their deck."""
-
-    name: str
-    decklist: str
-
-
-@dataclass(frozen=True)
-class GameResult:
-    """The winner, loser, ending Turn Number, and reason for a finished game."""
-
-    winner_name: str
-    loser_name: str
-    turn_number: int
-    reason: str = "empty_library"
 
 
 class Game:
@@ -99,7 +83,8 @@ class Game:
 
         Args:
             *specs: Exactly two player specifications.
-            rng: Random source retained for game setup and play.
+            rng: Random source used for game setup and play. Defaults to a new
+                ``random.Random``.
 
         Returns:
             A game with one constructed Deck for each supplied player.
@@ -131,41 +116,25 @@ class Game:
     @staticmethod
     def _build_player(spec: PlayerSpecification, name: str, owner_index: int) -> Player:
         entries = parse_decklist(spec.decklist)
-        Game._validate_deck_entries(entries, name)
+        decklist_validator.validate(entries, name)
         player = Player(name, life_total=20)
         for entry in entries:
             Game._add_entry_cards(player, entry, owner_index)
         return player
 
     @staticmethod
-    def _validate_deck_entries(entries: list[DecklistEntry], name: str) -> None:
-        basic_lands = {"Plains", "Island", "Swamp", "Mountain", "Forest"}
-        if sum(entry.quantity for entry in entries) < 60:
-            raise ValueError(f"Player {name!r} deck must contain at least 60 cards")
-        if any(entry.name not in basic_lands for entry in entries):
-            raise ValueError(f"Player {name!r} deck may contain only basic lands")
-
-    @staticmethod
     def _add_entry_cards(player: Player, entry: DecklistEntry, owner_index: int) -> None:
-        for _ in range(entry.quantity):
-            player.deck.add_card(
-                Card(
-                    entry.name,
-                    "Land",
-                    owner_index,
-                    supertypes=["Basic"],
-                    subtypes=[entry.name],
-                )
-            )
+        land = Card(
+            entry.name,
+            "Land",
+            owner_index,
+            supertypes=["Basic"],
+            subtypes=[entry.name],
+        )
+        player.deck.add_cards(land, entry.quantity)
 
-    def start_game(self, rng: random.Random | None = None) -> None:
-        """Start the game: shuffle decks, deal 7 cards to each player, and select first player.
-
-        Args:
-            rng: A random.Random instance for RNG operations. If None, a new Random is created.
-        """
-        if rng is not None:
-            self._rng = rng
+    def start_game(self) -> None:
+        """Start the game: shuffle decks, deal 7 cards to each player, and select first player."""
         self._has_started = True
         self._shuffle_decks()
         self._select_starting_player()

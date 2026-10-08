@@ -1,5 +1,7 @@
 """Zone base class representing game areas in Magic: The Gathering."""
 
+from copy import deepcopy
+
 from mtgengine.card import Card
 
 
@@ -22,7 +24,20 @@ class Zone:
         Args:
             card: The card to add.
         """
-        self.cards.append(card)
+        self.add_cards(card, 1)
+
+    def add_cards(self, card: Card, quantity: int) -> None:
+        """Add a card to the zone the given number of times.
+
+        The supplied card is added first; each additional copy is an independent
+        copy so that copies do not share mutable state.
+
+        Args:
+            card: The card to add.
+            quantity: How many copies to add.
+        """
+        for index in range(quantity):
+            self.cards.append(card if index == 0 else deepcopy(card))
 
     def remove_card(self, card: Card) -> None:
         """
