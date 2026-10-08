@@ -42,12 +42,11 @@ def parse_decklist(text: str) -> list[DecklistEntry]:
 
 
 def _parse_line(line: str, line_number: int) -> DecklistEntry | None:
-    stripped_line = line.strip()
-    if not stripped_line:
+    if not line:
         return None
-    match = _DECKLIST_LINE.fullmatch(stripped_line)
-    if _is_invalid_line(stripped_line, match):
-        raise ValueError(f"Unparseable decklist entry on line {line_number}: {stripped_line!r}")
+    match = _DECKLIST_LINE.fullmatch(line)
+    if _is_invalid_line(line, match):
+        raise ValueError(f"Unparseable decklist entry on line {line_number}: {line!r}")
     assert match is not None
     return DecklistEntry(
         quantity=int(match.group("quantity")),
