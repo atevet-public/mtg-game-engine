@@ -33,6 +33,27 @@ class TestZone:
         assert zone.cards[0] == card1
         assert zone.cards[1] == card2
 
+    def test_add_cards_adds_quantity_copies(self) -> None:
+        """Test adding several copies of a card."""
+        zone = Zone("Test Zone")
+        card = Card("Forest", card_type="Land", owner_index=0)
+        zone.add_cards(card, 3)
+        assert len(zone.cards) == 3
+        assert all(copy is not card for copy in zone.cards[1:])
+        assert all(copy.name == "Forest" for copy in zone.cards)
+
+    def test_add_cards_adds_independent_copies(self) -> None:
+        """Test that copies are distinct objects."""
+        zone = Zone("Test Zone")
+        zone.add_cards(Card("Forest", card_type="Land", owner_index=0), 2)
+        assert zone.cards[0] is not zone.cards[1]
+
+    def test_add_cards_zero_adds_nothing(self) -> None:
+        """Test that a quantity of zero adds no cards."""
+        zone = Zone("Test Zone")
+        zone.add_cards(Card("Forest", card_type="Land", owner_index=0), 0)
+        assert zone.cards == []
+
     def test_remove_card_from_zone(self) -> None:
         """Test removing a card from a zone."""
         zone = Zone("Test Zone")
