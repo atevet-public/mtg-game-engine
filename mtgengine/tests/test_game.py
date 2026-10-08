@@ -239,7 +239,9 @@ def test_starting_player_skips_their_first_draw_step_only() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     for player_index, player in enumerate(game.players):
         for card_number in range(9):
-            player.deck.add_card(Card(f"Player {player_index} card {card_number}", "Land", player_index))
+            player.deck.add_card(
+                Card(f"Player {player_index} card {card_number}", "Land", player_index)
+            )
     game.start_game(SelectSecondPlayerRandom())
     starting_hand_size = len(game.players[1].hand.get_cards())
 
@@ -248,6 +250,12 @@ def test_starting_player_skips_their_first_draw_step_only() -> None:
     assert len(game.players[1].hand.get_cards()) == starting_hand_size
     assert len(game.players[0].hand.get_cards()) == 7
     assert game.event_log[-1] == {"type": "draw", "player_index": 1, "card": "Player 1 card 2"}
+
+    game.advance_to_next_player()
+    game.advance_to_next_player()
+    game.perform_draw_step()
+    assert len(game.players[1].hand.get_cards()) == starting_hand_size + 1
+    assert game.event_log[-1] == {"type": "draw", "player_index": 1, "card": "Player 1 card 1"}
 
 
 def test_successfully_drawing_last_card_does_not_end_game() -> None:
@@ -295,9 +303,7 @@ def test_failed_draw_from_empty_deck_ends_game_for_active_player() -> None:
 
     assert game.is_game_over is True
     assert game.winner is game.players[1]
-    assert game.event_log == [
-        {"type": "game_over", "player_index": 0, "reason": "empty_library"}
-    ]
+    assert game.event_log == [{"type": "game_over", "player_index": 0, "reason": "empty_library"}]
 
 
 def test_draw_step_does_not_mutate_other_games() -> None:
@@ -394,7 +400,9 @@ def test_turn_number_increments_only_after_both_players_complete_a_cycle() -> No
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     for player_index, player in enumerate(game.players):
         for card_number in range(10):
-            player.deck.add_card(Card(f"Player {player_index} card {card_number}", "Land", player_index))
+            player.deck.add_card(
+                Card(f"Player {player_index} card {card_number}", "Land", player_index)
+            )
     game.start_game(SelectSecondPlayerRandom())
 
     game.advance_to_next_player()
