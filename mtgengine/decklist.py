@@ -6,13 +6,11 @@ from dataclasses import dataclass
 _DECKLIST_LINE = re.compile(
     r"(?P<quantity>[1-9]\d*)\s+(?P<name>.+?)"
     r"(?:\s+\((?P<set_code>[A-Za-z0-9]{2,6})\)"
-    r"(?:\s+(?P<collector_number>[A-Za-z0-9-]+))?)?"
+    r"(?:\s+(?P<collector_number>[0-9]+))?)?"
 )
 _FOIL_MARKER = re.compile(r"\s+\*F\*$", re.IGNORECASE)
 _HASH_COMMENT = re.compile(r"\s+#")
-_MALFORMED_PRINTING_SUFFIX = re.compile(
-    r"\s+\([A-Za-z0-9]{2,6}\)\s+[A-Za-z0-9-]+\s+\S+"
-)
+_MALFORMED_PRINTING_SUFFIX = re.compile(r"\s+\([A-Za-z0-9]{2,6}\)\s+[A-Za-z0-9-]+\s+\S+")
 _MISSING_CARD_NAME = re.compile(r"^[1-9]\d*\s+\([A-Za-z0-9]{2,6}\)(?:\s+[A-Za-z0-9-]+)?$")
 
 
@@ -38,12 +36,9 @@ def parse_decklist(text: str) -> list[DecklistEntry]:
     Raises:
         ValueError: If any non-blank line does not match the supported format.
     """
-    entries = []
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        entry = _parse_line(line, line_number)
-        if entry is not None:
-            entries.append(entry)
-    return entries
+    stripped_lines = (line.strip() for line in text.splitlines())
+    entries = (_parse_line(line, line_num) for line_num, line in enumerate(stripped_lines, start=1))
+    return [entry for entry in entries if entry is not None]
 
 
 def _parse_line(line: str, line_number: int) -> DecklistEntry | None:
