@@ -13,7 +13,7 @@ class _SynchronousEmitter:
     def __init__(self, event_linker: type[EventLinker]) -> None:
         self._event_linker = event_linker
         self._subscribers: list[
-            tuple[type[object] | None, Callable[[object], None], EventSubscriber]
+            tuple[type[object] | None, Callable[..., None], EventSubscriber]
         ] = []
 
     def subscribe(
@@ -22,7 +22,7 @@ class _SynchronousEmitter:
         handler: EventHandler[Event],
         subscription: EventSubscriber,
     ) -> None:
-        self._subscribers.append((event_type, handler, subscription))  # type: ignore[arg-type]
+        self._subscribers.append((event_type, handler, subscription))
 
     def emit(self, event: object) -> None:
         registered = self._event_linker.get_subscribers_from_events(type(event), Ellipsis)
