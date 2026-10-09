@@ -3,9 +3,15 @@
 import random
 
 import pytest
-from pyventus.events import EventLinker
 
 from mtgengine.card import Card
+from mtgengine.events import (
+    CardDiscardedEvent,
+    EmptyDeckDrawAttemptedEvent,
+    GameOverEvent,
+    LandPlayedEvent,
+    StartingPlayerSelectedEvent,
+)
 from mtgengine.game import Game
 from mtgengine.player import Player
 from mtgengine.tests.game_test_helpers import SelectSecondPlayerRandom
@@ -120,20 +126,37 @@ def test_start_game_selects_and_logs_the_starting_player_before_opening_draws() 
             )
 
     game._rng = SelectSecondPlayerRandom()
+    selected: list[StartingPlayerSelectedEvent] = []
+    game.events.subscribe(StartingPlayerSelectedEvent, selected.append)
     game.start_game()
 
     assert game.turn.active_player is game.players[1]
-    assert game.event_log[0] == {"type": "starting_player", "player_index": 1}
-    assert game.event_log[1:3] == [
-        {"type": "draw", "player_index": 0, "card": "Player 0 card 7"},
-        {"type": "draw", "player_index": 0, "card": "Player 0 card 6"},
-    ]
-    assert game.event_log[8:10] == [
-        {"type": "draw", "player_index": 1, "card": "Player 1 card 7"},
-        {"type": "draw", "player_index": 1, "card": "Player 1 card 6"},
-    ]
+    assert selected == [StartingPlayerSelectedEvent(game.players[1])]
+    assert game.event_log[0] == {"type": "starting_player", "player": game.players[1]}
+    assert [entry["card"] for entry in game.event_log[1:8]] == game.players[0].hand.get_cards()
+    assert all(entry["player"] is game.players[0] for entry in game.event_log[1:8])
+    assert [entry["cards_remaining"] for entry in game.event_log[1:8]] == list(range(7, 0, -1))
+    assert [entry["card"] for entry in game.event_log[8:15]] == game.players[1].hand.get_cards()
+    assert all(entry["player"] is game.players[1] for entry in game.event_log[8:15])
     assert len(game.event_log) == 15
     assert [len(player.hand.get_cards()) for player in game.players] == [7, 7]
+
+
+def test_empty_deck_during_opening_hand_dealing_ends_the_game() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    for _ in range(7):
+        game.players[0].deck.add_card(Card("Forest", "Land", 0))
+    for _ in range(6):
+        game.players[1].deck.add_card(Card("Island", "Land", 1))
+    game._rng = SelectSecondPlayerRandom()
+
+    game.start_game()
+
+    assert len(game.players[0].hand.get_cards()) == 7
+    assert len(game.players[1].hand.get_cards()) == 6
+    assert game.result is not None
+    assert game.result.loser is game.players[1]
+    assert game.result.winner is game.players[0]
 
 
 def test_game_has_shared_battlefield_zone() -> None:
@@ -141,23 +164,26 @@ def test_game_has_shared_battlefield_zone() -> None:
     assert isinstance(game.battlefield, Battlefield)
 
 
-def test_game_sets_player_game_reference() -> None:
+def test_game_assigns_its_event_bus_to_each_player() -> None:
     player1 = Player("Alice", 20)
     player2 = Player("Bob", 20)
     game = Game([player1, player2])
-    assert player1.game is game
-    assert player2.game is game
+    assert player1.events is game.events
+    assert player2.events is game.events
 
 
 def test_beginning_phase_steps_emit_turn_events() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     received_events: list[TurnUntapStepEvent | TurnUpkeepStepEvent | TurnDrawStepEvent] = []
 
-    @EventLinker.on(TurnUntapStepEvent, TurnUpkeepStepEvent, TurnDrawStepEvent)
     def handle_step_event(
         event: TurnUntapStepEvent | TurnUpkeepStepEvent | TurnDrawStepEvent,
     ) -> None:
         received_events.append(event)
+
+    game.events.subscribe(TurnUntapStepEvent, handle_step_event)
+    game.events.subscribe(TurnUpkeepStepEvent, handle_step_event)
+    game.events.subscribe(TurnDrawStepEvent, handle_step_event)
 
     game.perform_beginning_phase()
 
@@ -172,8 +198,7 @@ def test_beginning_phase_steps_emit_turn_events() -> None:
 
 def test_game_state_flags_initialize() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
-    assert game.is_game_over is False
-    assert game.winner is None
+    assert game.result is None
     assert game.event_log == []
 
 
@@ -199,29 +224,20 @@ def test_perform_upkeep_step_logs_event() -> None:
 
     game.perform_upkeep_step()
 
-    assert game.event_log[-1] == {"type": "upkeep_step", "player_index": 0}
+    assert game.event_log[-1] == {"type": "upkeep_step", "turn": game.turn}
 
 
-def test_draw_card_from_deck_moves_top_card_to_hand() -> None:
-    """Draw the active player's top deck card into their hand."""
+def test_player_draws_top_card_into_hand() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     card = Card("Forest", card_type="Land", owner_index=0)
-    game.turn.active_player.deck.add_card(card)
+    player = game.turn.active_player
+    player.deck.add_card(card)
 
-    drawn_card = game.draw_card_from_deck()
+    drawn_cards = player.draw_from_deck(1)
 
-    assert drawn_card is card
-    assert card in game.turn.active_player.hand.get_cards()
-    assert card not in game.turn.active_player.deck.get_cards()
-
-
-def test_draw_card_from_deck_returns_none_if_deck_empty() -> None:
-    """Return None if the active player's deck is empty."""
-    game = Game([Player("Alice", 20), Player("Bob", 20)])
-
-    drawn_card = game.draw_card_from_deck()
-
-    assert drawn_card is None
+    assert drawn_cards == [card]
+    assert player.hand.get_cards() == [card]
+    assert player.deck.get_cards() == []
 
 
 def test_perform_draw_step_draws_card_from_deck() -> None:
@@ -251,13 +267,11 @@ def test_starting_player_skips_their_first_draw_step_only() -> None:
 
     assert len(game.players[1].hand.get_cards()) == starting_hand_size
     assert len(game.players[0].hand.get_cards()) == 7
-    assert game.event_log[-1] == {"type": "draw", "player_index": 1, "card": "Player 1 card 2"}
 
     game.advance_to_next_player()
     game.advance_to_next_player()
     game.perform_draw_step()
     assert len(game.players[1].hand.get_cards()) == starting_hand_size + 1
-    assert game.event_log[-1] == {"type": "draw", "player_index": 1, "card": "Player 1 card 1"}
 
 
 def test_successfully_drawing_last_card_does_not_end_game() -> None:
@@ -268,44 +282,51 @@ def test_successfully_drawing_last_card_does_not_end_game() -> None:
     game.perform_draw_step()
 
     assert game.players[0].hand.get_cards() == [last_card]
-    assert game.check_for_empty_deck_loss() is False
-    assert game.is_game_over is False
+    assert game.result is None
 
 
 def test_empty_deck_does_not_cause_loss_until_a_draw_is_attempted() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
 
-    assert game.check_for_empty_deck_loss() is False
-    assert game.is_game_over is False
+    assert game.result is None
 
 
-def test_failed_draw_by_another_player_does_not_end_active_players_game() -> None:
+def test_empty_deck_draw_attempt_ends_game_for_the_player_who_attempted_it() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
 
-    assert game.draw_card_from_deck(game.players[1]) is None
-    assert game.check_for_empty_deck_loss() is False
-    assert game.is_game_over is False
+    assert game.players[1].draw_from_deck(1) == []
+    assert game.result is not None
+    assert game.result.loser is game.players[1]
+    assert game.result.winner is game.players[0]
 
 
-def test_failed_draw_marker_expires_after_the_turn_cycle() -> None:
+def test_empty_deck_draw_attempt_ends_game_with_player_identity_result() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
+    results: list[GameOverEvent] = []
+    game.events.subscribe(GameOverEvent, results.append)
 
-    assert game.draw_card_from_deck(game.players[0]) is None
-    game.advance_to_next_player()
-    game.advance_to_next_player()
+    game.players[0].draw_from_deck(1)
 
-    assert game.check_for_empty_deck_loss() is False
-    assert game.is_game_over is False
+    assert game.result is not None
+    assert len(results) == 1
+    assert results[0].result.winner is game.players[1]
+    assert results[0].result.loser is game.players[0]
+    assert results[0].result.turn_number == game.turn.turn_number
+    assert game.event_log[-2:] == [
+        {"type": "empty_deck_draw_attempted", "player": game.players[0]},
+        {"type": "game_over", "result": game.result},
+    ]
 
 
-def test_failed_draw_from_empty_deck_ends_game_for_active_player() -> None:
+def test_repeated_empty_deck_attempts_emit_only_one_game_over_event() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
+    results: list[GameOverEvent] = []
+    game.events.subscribe(GameOverEvent, results.append)
 
-    game.perform_draw_step()
+    game.players[0].events.emit(EmptyDeckDrawAttemptedEvent(game.players[0]))
+    game.players[0].events.emit(EmptyDeckDrawAttemptedEvent(game.players[0]))
 
-    assert game.is_game_over is True
-    assert game.winner is game.players[1]
-    assert game.event_log == [{"type": "game_over", "player_index": 0, "reason": "empty_library"}]
+    assert len(results) == 1
 
 
 def test_draw_step_does_not_mutate_other_games() -> None:
@@ -318,7 +339,7 @@ def test_draw_step_does_not_mutate_other_games() -> None:
 
     assert first_game.event_log == []
     assert second_game.players[0].hand.get_cards() == [card]
-    assert second_game.event_log == [{"type": "draw", "player_index": 0, "card": "Forest"}]
+    assert second_game.result is None
 
 
 def test_first_main_phase_plays_a_land_from_the_active_players_hand() -> None:
@@ -326,15 +347,22 @@ def test_first_main_phase_plays_a_land_from_the_active_players_hand() -> None:
     land = Card("Forest", "Land", 0)
     land.tap()
     game.players[0].hand.add_card(land)
+    played: list[LandPlayedEvent] = []
+    game.events.subscribe(LandPlayedEvent, played.append)
 
     game.perform_first_main_phase()
 
     assert game.players[0].hand.get_cards() == []
     assert game.battlefield.get_cards() == [land]
+    assert played == [LandPlayedEvent(game.players[0], land)]
     assert land.owner_index == 0
     assert land.tapped is False
-    assert game.event_log[-1] == {"type": "land_drop", "player_index": 0, "card": "Forest"}
-    assert game.event_log[-2] == {"type": "first_main_phase", "player_index": 0}
+    assert game.event_log[-1] == {
+        "type": "land_drop",
+        "player": game.players[0],
+        "card": land,
+    }
+    assert game.event_log[-2] == {"type": "first_main_phase", "turn": game.turn}
 
 
 def test_player_can_make_only_one_land_drop_per_turn() -> None:
@@ -360,13 +388,15 @@ def test_first_main_phase_does_not_play_nonland_cards() -> None:
 
     assert game.players[0].hand.get_cards() == [spell]
     assert game.battlefield.get_cards() == []
-    assert game.event_log == [{"type": "first_main_phase", "player_index": 0}]
+    assert game.event_log == [{"type": "first_main_phase", "turn": game.turn}]
 
 
 def test_later_turn_phases_emit_events_and_cleanup_discards_to_seven() -> None:
     game = Game([Player("Alice", 20), Player("Bob", 20)])
     for card_number in range(9):
         game.players[0].hand.add_card(Card(f"Card {card_number}", "Land", 0))
+    discarded: list[CardDiscardedEvent] = []
+    game.events.subscribe(CardDiscardedEvent, discarded.append)
 
     game.perform_combat_phase()
     game.perform_second_main_phase()
@@ -374,9 +404,21 @@ def test_later_turn_phases_emit_events_and_cleanup_discards_to_seven() -> None:
 
     assert len(game.players[0].hand.get_cards()) == 7
     assert [card.name for card in game.players[0].graveyard.get_cards()] == ["Card 0", "Card 1"]
+    assert discarded == [
+        CardDiscardedEvent(game.players[0], game.players[0].graveyard.get_cards()[0]),
+        CardDiscardedEvent(game.players[0], game.players[0].graveyard.get_cards()[1]),
+    ]
     assert game.event_log[-2:] == [
-        {"type": "discard", "player_index": 0, "card": "Card 0"},
-        {"type": "discard", "player_index": 0, "card": "Card 1"},
+        {
+            "type": "discard",
+            "player": game.players[0],
+            "card": game.players[0].graveyard.get_cards()[0],
+        },
+        {
+            "type": "discard",
+            "player": game.players[0],
+            "card": game.players[0].graveyard.get_cards()[1],
+        },
     ]
     assert {event["type"] for event in game.event_log} >= {
         "combat_phase",
@@ -394,7 +436,7 @@ def test_turn_does_not_continue_to_cleanup_after_empty_library_loss() -> None:
     game.perform_second_main_phase()
     game.perform_cleanup_step()
 
-    assert game.is_game_over is True
+    assert game.result is not None
     assert game.players[0].hand.get_cards()[0].name == "Keep this card"
 
 
