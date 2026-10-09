@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 
 from mtgengine import decklist_validator
 from mtgengine.card import Card
@@ -311,6 +312,6 @@ class Game:
     def _is_over(self) -> bool:
         return self.result is not None
 
-    def _emit_step_event(self, event_type: type) -> None:
+    def _emit_step_event(self, event_type: Callable[[Turn], object]) -> None:
         assert self.turn
         self.events.emit(event_type(self.turn))
