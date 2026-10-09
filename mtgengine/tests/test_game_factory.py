@@ -99,10 +99,9 @@ def test_play_returns_result_when_a_player_attempts_to_draw_from_empty_deck() ->
     result = game.play()
 
     assert result == GameResult(
-        winner_name="Bob",
-        loser_name="Alice",
+        winner=game.players[1],
+        loser=game.players[0],
         turn_number=54,
         reason="empty_library",
     )
-    assert game.is_game_over is True
-    assert game.event_log[-1] == {"type": "game_over", "player_index": 0, "reason": "empty_library"}
+    assert game.result is result

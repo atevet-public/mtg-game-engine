@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from mtgengine.card import Card
+from mtgengine.event_bus import EventBus
+from mtgengine.events import CardDrawnEvent, EmptyDeckDrawAttemptedEvent
 from mtgengine.zone.deck import Deck
 from mtgengine.zone.exile import Exile
 from mtgengine.zone.graveyard import Graveyard
 from mtgengine.zone.hand import Hand
-
-if TYPE_CHECKING:
-    from mtgengine.game import Game
 
 
 class Player:
@@ -24,8 +22,8 @@ class Player:
             life_total: The player's starting life total.
 
         Notes:
-            ``game`` is intentionally a back-reference set by ``Game`` so player-driven
-            events (like untap handling) can resolve shared zones and turn context.
+            ``events`` is assigned by ``Game`` so player-driven actions can publish
+            events to that game's subscribers.
         """
         self.name = name
         self.life_total = life_total
@@ -33,15 +31,21 @@ class Player:
         self.hand = Hand()
         self.graveyard = Graveyard()
         self.exile = Exile()
-        # Intentional back-reference for turn/event handlers that need game state.
-        self.game: Game | None = None
+        self.events = EventBus()
 
-    def draw_from_deck(self, n: int) -> None:
-        """Draw n cards from the deck and add them to the player's hand.
+    def draw_from_deck(self, n: int) -> list[Card]:
+        """Draw up to n cards individually and add each to the player's hand.
 
         Args:
             n: Number of cards to draw.
         """
-        cards = self.deck.draw(n)
-        for card in cards:
+        cards: list[Card] = []
+        for _ in range(n):
+            if not self.deck.get_cards():
+                self.events.emit(EmptyDeckDrawAttemptedEvent(self))
+                break
+            card = self.deck.draw(1)[0]
             self.hand.add_card(card)
+            cards.append(card)
+            self.events.emit(CardDrawnEvent(self, card, len(self.deck.get_cards())))
+        return cards
