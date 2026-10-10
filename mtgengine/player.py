@@ -38,6 +38,9 @@ class Player:
 
         Args:
             n: Number of cards to draw.
+
+        Returns:
+            The cards successfully drawn before the deck became empty.
         """
         cards: list[Card] = []
         for _ in range(n):

@@ -15,4 +15,4 @@ Use the single-context layout. See `docs/agents/domain.md`.
 ## Code Writing Guidelines
 
 * End each file with a newline.
-* Run `make fix` before committing, this uses tools installed by `uv`.
+* Run `make fix` before committing; it uses tools installed by `uv`.
