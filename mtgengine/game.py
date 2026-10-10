@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import random
-
-from pyventus.events import EventLinker
+from collections.abc import Callable
 
 from mtgengine import decklist_validator
 from mtgengine.card import Card
 from mtgengine.decklist import DecklistEntry, parse_decklist
+from mtgengine.event_bus import EventBus
+from mtgengine.event_logger import EventLogger
+from mtgengine.events import (
+    CardDiscardedEvent,
+    EmptyDeckDrawAttemptedEvent,
+    GameOverEvent,
+    LandPlayedEvent,
+    StartingPlayerSelectedEvent,
+)
 from mtgengine.game_result import GameResult
 from mtgengine.player import Player
 from mtgengine.player_specification import PlayerSpecification
@@ -34,8 +42,6 @@ class Game:
 
         The battlefield is modeled as a shared zone. Deck, hand, graveyard, and
         exile remain player-owned zones in the current model. The stack is shared.
-        Each player keeps an intentional ``player.game`` back-reference for
-        event handlers that need shared game context.
 
         Args:
             players: List of players in the game (must have at least one).
@@ -46,32 +52,31 @@ class Game:
         if not players:
             raise ValueError("A game must have at least one player")
         self.players: list[Player] = players
+        self.events = EventBus()
+        self.event_logger = EventLogger(self.events)
+        for player in self.players:
+            player.events = self.events
         self.battlefield: Battlefield = Battlefield()
         self.stack: Stack = Stack()
-        self.turn = Turn(1, self.players[0])
+        self.turn = Turn(1, self.players[0], self.events)
         self._rng = random.Random()
         self._starting_player: Player | None = None
         self._starting_player_index = 0
         self._starting_player_first_draw_skipped = False
         self._land_drop_used = False
         self._has_started = False
-        self._last_failed_draw_player: Player | None = None
-        for player in self.players:
-            player.game = self
-        EventLinker.on(TurnUntapStepEvent)(self._handle_untap_step)
-        EventLinker.on(TurnUpkeepStepEvent)(self._handle_upkeep_step)
-        EventLinker.on(TurnDrawStepEvent)(self._handle_draw_step)
-        EventLinker.on(TurnPrecombatMainPhaseEvent)(self._handle_first_main_phase)
-        EventLinker.on(TurnCombatPhaseEvent)(self._handle_combat_phase)
-        EventLinker.on(TurnPostcombatMainPhaseEvent)(self._handle_second_main_phase)
-        EventLinker.on(TurnCleanupStepEvent)(self._handle_cleanup_step)
+        self.events.subscribe(TurnUntapStepEvent, self._handle_untap_step)
+        self.events.subscribe(TurnDrawStepEvent, self._handle_draw_step)
+        self.events.subscribe(TurnPrecombatMainPhaseEvent, self._handle_first_main_phase)
+        self.events.subscribe(TurnCleanupStepEvent, self._handle_cleanup_step)
+        self.events.subscribe(EmptyDeckDrawAttemptedEvent, self._handle_empty_deck_draw_attempt)
 
-        # Game state flags
-        self.is_game_over: bool = False
-        self.winner: Player | None = None
-        # Indexed event log: list of event dicts with sequential indices
+        self.result: GameResult | None = None
 
-        self.event_log: list[dict[str, object]] = []
+    @property
+    def event_log(self) -> list[dict[str, object]]:
+        """Return the event log collected by this game's logger."""
+        return self.event_logger.entries
 
     @classmethod
     def from_player_specification(
@@ -148,19 +153,18 @@ class Game:
         self._starting_player = self._rng.choice(self.players)
         self._starting_player_index = self.players.index(self._starting_player)
         self._starting_player_first_draw_skipped = False
-        self.turn = Turn(1, self._starting_player)
-        self.event_log.append(
-            {"type": "starting_player", "player_index": self._starting_player_index}
-        )
+        self.turn = Turn(1, self._starting_player, self.events)
+        self.events.emit(StartingPlayerSelectedEvent(self._starting_player))
 
     def _deal_opening_hands(self) -> None:
         for player in self.players:
-            for _ in range(7):
-                self.draw_card_from_deck(player)
+            player.draw_from_deck(7)
+            if self._is_over():
+                return
 
     def perform_beginning_phase(self) -> None:
         """Perform the beginning phase in order."""
-        if self.is_game_over:
+        if self._is_over():
             return
         self.perform_untap_step()
         self.perform_upkeep_step()
@@ -168,13 +172,11 @@ class Game:
 
     def perform_untap_step(self) -> None:
         """Untap permanents controlled by the active player."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnUntapStepEvent)
 
     def _handle_untap_step(self, event: TurnUntapStepEvent) -> None:
         """Untap permanents owned by the active player."""
-        if not self._owns_turn_event(event):
-            return
         active_index = self.players.index(event.turn.active_player)
         for permanent in self.battlefield.get_cards():
             if permanent.owner_index == active_index:
@@ -182,28 +184,17 @@ class Game:
 
     def perform_upkeep_step(self) -> None:
         """Resolve upkeep effects for the active player."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnUpkeepStepEvent)
-
-    def _handle_upkeep_step(self, event: TurnUpkeepStepEvent) -> None:
-        """Log the active player's upkeep step."""
-        if not self._owns_turn_event(event):
-            return
-        self.event_log.append(
-            {
-                "type": "upkeep_step",
-                "player_index": self.players.index(event.turn.active_player),
-            }
-        )
 
     def perform_draw_step(self) -> None:
         """Draw a card for the active player."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnDrawStepEvent)
 
     def _handle_draw_step(self, event: TurnDrawStepEvent) -> None:
         """Draw a card for the active player during the draw step."""
-        if not self._owns_turn_event(event) or self.is_game_over:
+        if self._is_over():
             return
         if (
             event.turn.active_player is self._starting_player
@@ -211,28 +202,21 @@ class Game:
         ):
             self._starting_player_first_draw_skipped = True
             return
-        if self.draw_card_from_deck() is None:
-            self.check_for_empty_deck_loss()
+        event.turn.active_player.draw_from_deck(1)
 
     def perform_first_main_phase(self) -> None:
         """Perform the Active Player's precombat main phase."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnPrecombatMainPhaseEvent)
 
     def _handle_first_main_phase(self, event: TurnPrecombatMainPhaseEvent) -> None:
         """Make an automatic MVP Land Drop during the precombat main phase."""
-        if self._owns_turn_event(event) and not self.is_game_over:
-            self.event_log.append(
-                {
-                    "type": "first_main_phase",
-                    "player_index": self.players.index(event.turn.active_player),
-                }
-            )
+        if not self._is_over():
             self.perform_play_land()
 
     def perform_play_land(self) -> bool:
         """Move the first land in the Active Player's hand onto the battlefield."""
-        if self.is_game_over or self._land_drop_used:
+        if self._is_over() or self._land_drop_used:
             return False
 
         player = self.turn.active_player
@@ -252,40 +236,26 @@ class Game:
         land.untap()
         self.battlefield.add_card(land)
         self._land_drop_used = True
-        self.event_log.append(
-            {
-                "type": "land_drop",
-                "player_index": self.players.index(player),
-                "card": land.name,
-            }
-        )
+        self.events.emit(LandPlayedEvent(player, land))
 
     def perform_combat_phase(self) -> None:
         """Perform the no-op MVP combat phase."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnCombatPhaseEvent)
-
-    def _handle_combat_phase(self, event: TurnCombatPhaseEvent) -> None:
-        """Handle the no-op MVP combat phase for this game."""
-        self._log_phase_event(event, "combat_phase")
 
     def perform_second_main_phase(self) -> None:
         """Perform the no-op MVP postcombat main phase."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnPostcombatMainPhaseEvent)
-
-    def _handle_second_main_phase(self, event: TurnPostcombatMainPhaseEvent) -> None:
-        """Handle the no-op MVP postcombat main phase for this game."""
-        self._log_phase_event(event, "second_main_phase")
 
     def perform_cleanup_step(self) -> None:
         """Discard cards until the Active Player has no more than seven."""
-        if not self.is_game_over:
+        if not self._is_over():
             self._emit_step_event(TurnCleanupStepEvent)
 
     def _handle_cleanup_step(self, event: TurnCleanupStepEvent) -> None:
         """Discard excess cards from the Active Player's hand to their graveyard."""
-        if not self._owns_turn_event(event) or self.is_game_over:
+        if self._is_over():
             return
         player = event.turn.active_player
         while len(player.hand.get_cards()) > 7:
@@ -295,32 +265,21 @@ class Game:
         card = player.hand.get_cards()[0]
         player.hand.remove_card(card)
         player.graveyard.add_card(card)
-        self.event_log.append(
-            {"type": "discard", "player_index": self.players.index(player), "card": card.name}
-        )
-
-    def _log_phase_event(self, event: object, event_type: str) -> None:
-        """Record a phase event belonging to this game."""
-        if self._owns_turn_event(event):
-            turn = event.turn  # type: ignore[attr-defined]
-            self.event_log.append(
-                {"type": event_type, "player_index": self.players.index(turn.active_player)}
-            )
+        self.events.emit(CardDiscardedEvent(player, card))
 
     def advance_to_next_player(self) -> None:
         """Advance the Active Player and count a completed player cycle."""
-        if self.is_game_over:
+        if self._is_over():
             return
         active_index = self.players.index(self.turn.active_player)
         next_index = (active_index + 1) % len(self.players)
         turn_number = self.turn.turn_number + (next_index == self._starting_player_index)
-        self.turn = Turn(turn_number, self.players[next_index])
+        self.turn = Turn(turn_number, self.players[next_index], self.events)
         self._land_drop_used = False
-        self._last_failed_draw_player = None
 
     def advance_turn(self) -> None:
         """Perform the current turn and advance to the next player."""
-        if self.is_game_over:
+        if self._is_over():
             return
         self.perform_beginning_phase()
         self.perform_first_main_phase()
@@ -335,63 +294,24 @@ class Game:
             raise ValueError("A game requires exactly two players to play")
         if not self._has_started:
             self.start_game()
-        while not self.is_game_over:
+        while not self._is_over():
             self.advance_turn()
 
-        loser = self.turn.active_player
-        winner = self.winner
-        assert winner is not None
-        return GameResult(
-            winner_name=winner.name,
-            loser_name=loser.name,
-            turn_number=self.turn.turn_number,
-        )
+        assert self.result is not None
+        return self.result
 
-    def draw_card_from_deck(self, player: Player | None = None) -> Card | None:
-        """Draw a player's top card into their hand and record the draw."""
-        player = player or self.turn.active_player
-        if not player.deck.get_cards():
-            self._last_failed_draw_player = player
-            return None
-        card = player.deck.draw(1)[0]
-        self._last_failed_draw_player = None
-        player.hand.add_card(card)
-        self.event_log.append(
-            {
-                "type": "draw",
-                "player_index": self.players.index(player),
-                "card": card.name,
-            }
-        )
-        return card
+    def _handle_empty_deck_draw_attempt(self, event: EmptyDeckDrawAttemptedEvent) -> None:
+        if self._is_over():
+            return
+        loser = event.player
+        winner = next(player for player in self.players if player is not loser)
+        # TODO: Apply this loss at the next state-based-action check (CR 704.5b).
+        self.result = GameResult(winner, loser, self.turn.turn_number)
+        self.events.emit(GameOverEvent(self.result))
 
-    def check_for_empty_deck_loss(self) -> bool:
-        """End the game if the Active Player has failed to draw from an empty deck."""
-        if (
-            self.is_game_over
-            or self._last_failed_draw_player is not self.turn.active_player
-            or self.turn.active_player.deck.get_cards()
-        ):
-            return False
+    def _is_over(self) -> bool:
+        return self.result is not None
 
-        loser = self.turn.active_player
-        self.is_game_over = True
-        self.winner = next((player for player in self.players if player is not loser), None)
-        self.event_log.append(
-            {
-                "type": "game_over",
-                "player_index": self.players.index(loser),
-                "reason": "empty_library",
-            }
-        )
-        return True
-
-    def _owns_turn_event(self, event: object) -> bool:
-        """Return whether an event belongs to this game's active player."""
-        turn = getattr(event, "turn", None)
-        active_player = getattr(turn, "active_player", None)
-        return active_player is not None and active_player.game is self
-
-    def _emit_step_event(self, event_type: type) -> None:
+    def _emit_step_event(self, event_type: Callable[[Turn], object]) -> None:
         assert self.turn
-        self.turn._event_emitter.emit(event_type(self.turn))
+        self.events.emit(event_type(self.turn))
