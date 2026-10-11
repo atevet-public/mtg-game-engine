@@ -26,7 +26,11 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["mtgengine/"]
-addopts = "-v --cov=mtgengine --cov-report=term-missing"
+addopts = "-v --cov=mtgengine --cov-report=term-missing -m 'not integration'"
+markers = ["integration: launches the real MTGTable server subprocess"]
+
+[tool.uv]
+package = true
 
 [tool.ruff]
 line-length = 100

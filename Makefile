@@ -1,13 +1,16 @@
-.PHONY: install-uv deps test lint fix
+.PHONY: install-uv deps test test-integration lint fix
 
 install-uv:
 	curl -LsSf https://astral.sh/uv/install.sh | sh
 
 deps:
-	uv pip install -e ".[dev]"
+	uv sync --extra dev
 
 test:
-	python -m pytest mtgengine/ -v --cov=mtgengine --cov-report=term-missing
+	uv run python -m pytest mtgengine/ -v --cov=mtgengine --cov-report=term-missing
+
+test-integration:
+	uv run python -m pytest mtgengine/server/tests/test_end_to_end.py -v -m integration --no-cov -o addopts=''
 
 lint:
 	ruff check mtgengine
