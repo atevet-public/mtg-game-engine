@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 if TYPE_CHECKING:
     from mtgengine.event_bus import EventBus
@@ -41,8 +42,12 @@ class Turn:
         )
 
     @property
-    def phases_and_steps(self):
-        """Generator to iterate through the phases and steps of the turn."""
+    def phases_and_steps(self) -> Iterator[TurnEvent]:
+        """Generate each phase and step event in turn order.
+
+        Yields:
+            Each phase or step event after it has been emitted.
+        """
         for event in self._phase_and_step_events:
             event_instance = event(self)
             self._events.emit(event_instance)
@@ -137,3 +142,22 @@ class TurnEndStepEvent:
 class TurnCleanupStepEvent:
     turn: Turn
     log_name: ClassVar[str] = "cleanup_step"
+
+
+TurnEvent: TypeAlias = (
+    TurnBeginningPhaseEvent
+    | TurnUntapStepEvent
+    | TurnUpkeepStepEvent
+    | TurnDrawStepEvent
+    | TurnPrecombatMainPhaseEvent
+    | TurnCombatPhaseEvent
+    | TurnBeginningOfCombatStepEvent
+    | TurnDeclareAttackersStepEvent
+    | TurnDeclareBlockersStepEvent
+    | TurnCombatDamageStepEvent
+    | TurnEndOfCombatStepEvent
+    | TurnPostcombatMainPhaseEvent
+    | TurnEndingPhaseEvent
+    | TurnEndStepEvent
+    | TurnCleanupStepEvent
+)

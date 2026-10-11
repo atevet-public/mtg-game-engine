@@ -37,9 +37,29 @@ A land card with the Basic supertype and the land type matching its name: Plains
 _Avoid_: Basic, land card
 
 **Game Result**:
-The outcome of a finished game: the winner, the loser, the turn number, and the reason it ended.
+The record of Players who have lost; when the game ends, it also contains the winner, ending Turn Number, and reason.
 _Avoid_: Outcome, score
 
 **Empty-Library Loss**:
 The loss suffered by a player who attempts to draw from an empty deck.
 _Avoid_: Decking, milled out
+
+**Maximum Hand Size**:
+The number of cards a player may hold at cleanup; normally seven.
+_Avoid_: Hand limit
+
+**Move**:
+A player command that advances the game by exactly one step or phase.
+_Avoid_: Next, advance
+
+**Pass**:
+A player command that advances through every remaining step and phase of the Active Player's turn.  It stops for a required player decision, such as discarding to hand size, or at the next Active Player's first main phase; every step and phase passed through still occurs.  Pass turn does not stop for optional player decisions, like playing a land for the turn.
+_Avoid_: End turn, skip
+
+**MTGTable**:
+The whole interactive system that lets people play a game of the engine: one shared game and one seat per participant.
+_Avoid_: Platform, app
+
+**Seat**:
+A fixed position in a game occupied by one participant, numbered in join order; turn order follows seat order.
+_Avoid_: Slot, player number

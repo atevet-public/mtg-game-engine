@@ -13,7 +13,7 @@ def test_event_logger_records_shallow_event_fields_in_emission_order() -> None:
     logger = EventLogger(events)
     player = Player("Alice", 20)
     card = Card("Forest", "Land", 0)
-    result = GameResult(Player("Bob", 20), player, 4)
+    result = GameResult(Player("Bob", 20), [player], 4)
     draw = CardDrawnEvent(player, card, 2)
     game_over = GameOverEvent(result)
 

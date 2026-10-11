@@ -32,6 +32,29 @@ class TestPlayer:
         player = Player(name, life_total)
         assert player.name == name
         assert player.life_total == life_total
+        assert player.maximum_hand_size == 7
+
+    def test_player_has_configurable_maximum_hand_size(self) -> None:
+        player = Player("Alice", 20, maximum_hand_size=9)
+
+        assert player.maximum_hand_size == 9
+
+    def test_player_rejects_negative_maximum_hand_size(self) -> None:
+        with pytest.raises(ValueError, match="Maximum Hand Size"):
+            Player("Alice", 20, maximum_hand_size=-1)
+
+    def test_player_rejects_non_integer_maximum_hand_size(self) -> None:
+        with pytest.raises(TypeError, match="integer"):
+            Player("Alice", 20, maximum_hand_size=7.5)  # type: ignore[arg-type]
+
+    def test_player_detects_when_hand_exceeds_maximum_hand_size(self) -> None:
+        player = Player("Alice", 20, maximum_hand_size=1)
+        player.hand.add_card(Card("Forest", "Land", 0))
+        assert not player.exceeds_maximum_hand_size
+
+        player.hand.add_card(Card("Island", "Land", 0))
+
+        assert player.exceeds_maximum_hand_size
 
     def test_player_has_zones(self) -> None:
         """Test that a player has all required zones."""

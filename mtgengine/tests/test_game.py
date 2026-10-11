@@ -31,23 +31,11 @@ class TestGame:
         assert game.players == [player1, player2]
         assert isinstance(game.stack, Stack)
 
-    def test_game_single_player(self) -> None:
-        """Test that a game can be created with a single player."""
-        player = Player("Solo", 20)
-        game = Game([player])
-        assert len(game.players) == 1
-        assert game.players[0] is player
-
-    def test_play_requires_two_players(self) -> None:
-        """Reject running an MVP game with an unsupported player count."""
-        game = Game([Player("Solo", 20)])
-
-        with pytest.raises(ValueError, match="exactly two"):
-            game.play()
-
-    def test_game_requires_at_least_one_player(self) -> None:
-        """Test that game raises ValueError with no players."""
-        with pytest.raises(ValueError, match="at least one player"):
+    def test_game_requires_at_least_two_players(self) -> None:
+        """Reject games with fewer than two players during construction."""
+        with pytest.raises(ValueError, match="at least two"):
+            Game([Player("Solo", 20)])
+        with pytest.raises(ValueError, match="at least two"):
             Game([])
 
     def test_start_game_deals_hands_and_sets_current_player(self) -> None:
@@ -155,7 +143,7 @@ def test_empty_deck_during_opening_hand_dealing_ends_the_game() -> None:
     assert len(game.players[0].hand.get_cards()) == 7
     assert len(game.players[1].hand.get_cards()) == 6
     assert game.result is not None
-    assert game.result.loser is game.players[1]
+    assert game.result.losers == [game.players[1]]
     assert game.result.winner is game.players[0]
 
 
@@ -296,8 +284,53 @@ def test_empty_deck_draw_attempt_ends_game_for_the_player_who_attempted_it() -> 
 
     assert game.players[1].draw_from_deck(1) == []
     assert game.result is not None
-    assert game.result.loser is game.players[1]
+    assert game.result.losers == [game.players[1]]
     assert game.result.winner is game.players[0]
+
+
+def test_empty_deck_loss_eliminates_a_player_without_ending_multiplayer_game() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20), Player("Cara", 20)])
+    game_over_events: list[GameOverEvent] = []
+    game.events.subscribe(GameOverEvent, game_over_events.append)
+
+    game.players[1].draw_from_deck(1)
+
+    assert game.result is not None
+    assert game.result.winner is None
+    assert game.result.losers == [game.players[1]]
+    assert game_over_events == []
+    exposed_losers = game.result.losers
+    exposed_losers.clear()
+    assert game.result.losers == [game.players[1]]
+
+    game.advance_to_next_player()
+    assert game.turn.active_player is game.players[2]
+    game.players[2].draw_from_deck(1)
+
+    assert game.result is not None
+    assert game.result.winner is game.players[0]
+    assert game.result.losers == [game.players[1], game.players[2]]
+    assert len(game_over_events) == 1
+
+
+def test_eliminating_the_starting_player_preserves_turn_number_for_remaining_seats() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20), Player("Cara", 20)])
+    for player_index, player in enumerate(game.players):
+        for card_number in range(8):
+            player.deck.add_card(Card(f"Land {card_number}", "Land", player_index))
+    game.start_game()
+    eliminated_starting_player = game.turn.active_player
+    for card in eliminated_starting_player.deck.get_cards():
+        eliminated_starting_player.deck.remove_card(card)
+
+    eliminated_starting_player.draw_from_deck(1)
+    game.advance_to_next_player()
+    assert game.turn.turn_number == 1
+
+    game.advance_to_next_player()
+    assert game.turn.turn_number == 1
+    game.advance_to_next_player()
+    assert game.turn.turn_number == 2
 
 
 def test_empty_deck_draw_attempt_ends_game_with_player_identity_result() -> None:
@@ -310,7 +343,7 @@ def test_empty_deck_draw_attempt_ends_game_with_player_identity_result() -> None
     assert game.result is not None
     assert len(results) == 1
     assert results[0].result.winner is game.players[1]
-    assert results[0].result.loser is game.players[0]
+    assert results[0].result.losers == [game.players[0]]
     assert results[0].result.turn_number == game.turn.turn_number
     assert game.event_log[-2:] == [
         {"type": "empty_deck_draw_attempted", "player": game.players[0]},

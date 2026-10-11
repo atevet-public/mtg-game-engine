@@ -45,21 +45,38 @@ def test_game_factory_builds_two_players_and_their_basic_land_decks() -> None:
 
 @pytest.mark.parametrize(
     "specifications",
-    [
-        (),
-        (PlayerSpecification("Alice", create_decklist_entry()),),
-        (
-            PlayerSpecification("Alice", create_decklist_entry()),
-            PlayerSpecification("Bob", create_decklist_entry()),
-            PlayerSpecification("Cara", create_decklist_entry()),
-        ),
-    ],
+    [(), (PlayerSpecification("Alice", create_decklist_entry()),)],
 )
-def test_game_factory_requires_exactly_two_players(
+def test_game_factory_delegates_player_count_validation_to_game_constructor(
     specifications: tuple[PlayerSpecification, ...],
 ) -> None:
-    with pytest.raises(ValueError, match="exactly two"):
+    with pytest.raises(ValueError, match="at least two"):
         Game.from_player_specification(*specifications)
+
+
+def test_game_factory_accepts_three_players_and_custom_starting_life() -> None:
+    game = Game.from_player_specification(
+        PlayerSpecification("Alice", create_decklist_entry(), starting_life=30),
+        PlayerSpecification("Bob", create_decklist_entry("Island")),
+        PlayerSpecification("Cara", create_decklist_entry("Mountain")),
+    )
+
+    assert [player.name for player in game.players] == ["Alice", "Bob", "Cara"]
+    assert [player.life_total for player in game.players] == [30, 20, 20]
+
+
+def test_multiplayer_game_continues_after_eliminating_the_first_player() -> None:
+    game = Game.from_player_specification(
+        PlayerSpecification("Alice", create_decklist_entry()),
+        PlayerSpecification("Bob", create_decklist_entry("Island")),
+        PlayerSpecification("Cara", create_decklist_entry("Mountain")),
+        rng=SelectSecondPlayerRandom(1),
+    )
+
+    result = game.play()
+
+    assert result.winner in game.players
+    assert result.losers[0] in game.players
 
 
 @pytest.mark.parametrize("names", [("", "Bob"), ("  ", "Bob"), (" Alice ", "alice")])
@@ -100,7 +117,7 @@ def test_play_returns_result_when_a_player_attempts_to_draw_from_empty_deck() ->
 
     assert result == GameResult(
         winner=game.players[1],
-        loser=game.players[0],
+        losers=[game.players[0]],
         turn_number=54,
         reason="empty_library",
     )
