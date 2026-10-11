@@ -6,16 +6,9 @@ import secrets
 from dataclasses import dataclass
 
 from mtgengine import decklist_validator
+from mtgengine.action_errors import GameActionError
 from mtgengine.card import Card
 from mtgengine.decklist import parse_decklist
-from mtgengine.events import (
-    CardDiscardedEvent,
-    CardDrawnEvent,
-    EmptyDeckDrawAttemptedEvent,
-    GameOverEvent,
-    LandPlayedEvent,
-    StartingPlayerSelectedEvent,
-)
 from mtgengine.game import Game
 from mtgengine.game_result import GameResult
 from mtgengine.player import Player
@@ -23,6 +16,7 @@ from mtgengine.player_specification import PlayerSpecification
 from mtgengine.server.api_models import (
     CardResponse,
     EventResponse,
+    EventsResponse,
     GameResponse,
     GameResultResponse,
     HandResponse,
@@ -30,7 +24,7 @@ from mtgengine.server.api_models import (
     PlayerResponse,
     ZoneResponse,
 )
-from mtgengine.turn import TurnEvent
+from mtgengine.turn import Turn, TurnEvent
 
 _ZONE_NAMES = {"battlefield", "graveyard", "exile", "stack", "hand", "deck"}
 _PHASE_BY_EVENT_NAME = {
@@ -104,6 +98,7 @@ class Lobby:
         self.expected_players = expected_players
         self.rng = rng
         self.lock = asyncio.Lock()
+        self.event_condition = asyncio.Condition(self.lock)
         self.seats: list[Seat] = []
         self.tokens: dict[str, int] = {}
         self.game: Game | None = None
@@ -161,48 +156,143 @@ class Lobby:
             auto_discard=False,
         )
         self.game = game
-        game.events.subscribe_all(lambda event: self._record_game_event(game, event))
         self._append_event("game_started", {"player_count": len(specifications)})
         try:
             game.start_game()
         except Exception:
             self.game = None
             raise
+        self._record_game_events(game, 0)
         self._append_event(
             "hands_dealt",
             {"hand_counts": [len(player.hand.get_cards()) for player in game.players]},
         )
         return game
 
-    def _record_game_event(self, game: Game, event: object) -> None:
-        if isinstance(event, StartingPlayerSelectedEvent):
-            self._append_event("starting_player", {"seat": game.players.index(event.player)})
-        elif isinstance(event, CardDrawnEvent):
-            self._append_event(
-                "draw",
-                {
-                    "seat": game.players.index(event.player),
-                    "card": event.card.name,
-                    "cards_remaining": event.cards_remaining,
-                },
-            )
-        elif isinstance(event, EmptyDeckDrawAttemptedEvent):
-            self._append_event(
-                "empty_deck_draw_attempted", {"seat": game.players.index(event.player)}
-            )
-        elif isinstance(event, LandPlayedEvent):
-            self._append_event(
-                "land_drop", {"seat": game.players.index(event.player), "card": event.card.name}
-            )
-        elif isinstance(event, CardDiscardedEvent):
-            self._append_event(
-                "discard", {"seat": game.players.index(event.player), "card": event.card.name}
-            )
-        elif isinstance(event, GameOverEvent):
-            self._append_event("game_over", self._game_result_data(game, event.result))
+    def _record_game_events(self, game: Game, first_entry: int) -> None:
+        for entry in game.event_log[first_entry:]:
+            event_type = str(entry["type"])
+            data = self._event_data(game, event_type, entry)
+            if data is not None:
+                self._append_event(event_type, data)
+
+    @staticmethod
+    def _event_data(
+        game: Game, event_type: str, entry: dict[str, object]
+    ) -> dict[str, object] | None:
+        if event_type == "game_over":
+            result = entry.get("result")
+            return Lobby._game_result_data(game, result) if isinstance(result, GameResult) else None
+        if event_type == "starting_player":
+            player = entry.get("player")
+            return {"seat": game.players.index(player)} if isinstance(player, Player) else None
+        if "turn" in entry:
+            turn = entry["turn"]
+            if isinstance(turn, Turn):
+                return {
+                    "seat": game.players.index(turn.active_player),
+                    "turn_number": turn.turn_number,
+                }
+            return None
+        player = entry.get("player")
+        if not isinstance(player, Player):
+            return None
+        data: dict[str, object] = {"seat": game.players.index(player)}
+        card = entry.get("card")
+        if isinstance(card, Card):
+            data["card"] = card.name
+        if "cards_remaining" in entry:
+            data["cards_remaining"] = entry["cards_remaining"]
+        return data
 
     def _append_event(self, event_type: str, data: dict[str, object]) -> None:
         self.events.append(EventResponse(seq=len(self.events) + 1, type=event_type, data=data))
+        self.event_condition.notify_all()
+
+    async def command(
+        self, seat_index: int, command_type: str, card_name: str | None
+    ) -> EventsResponse:
+        """Validate and execute one command under the lobby's state lock.
+
+        Args:
+            seat_index: Seat identified by the bearer token.
+            command_type: One of play, move, pass, or discard.
+            card_name: Required card name for play and discard commands.
+
+        Returns:
+            Sequenced events caused by the command, redacted for this Seat.
+
+        Raises:
+            LobbyError: If the Seat cannot act or the command is not legal.
+        """
+        async with self.lock:
+            game = self._require_started_game()
+            if game.result is not None:
+                raise LobbyError(409, "game_over", "The game is over")
+            player = self._player_for_seat(game, seat_index)
+            if player is not game.turn.active_player:
+                raise LobbyError(409, "not_your_turn", "Only the Active Player may issue commands")
+            if command_type not in {"play", "move", "pass", "discard"}:
+                raise LobbyError(422, "invalid_command", f"Unknown command type: {command_type}")
+            if command_type in {"play", "discard"} and not card_name:
+                raise LobbyError(422, "missing_card", "This command requires a card name")
+            first_new_sequence = len(self.events) + 1
+            first_engine_entry = len(game.event_log)
+            try:
+                self._execute_command(game, player, command_type, card_name)
+            except GameActionError as error:
+                status_code = 409 if error.code in {"game_over", "not_your_turn"} else 422
+                raise LobbyError(status_code, error.code, str(error)) from error
+            self._record_game_events(game, first_engine_entry)
+            return EventsResponse(events=self._events_for_seat(seat_index, first_new_sequence - 1))
+
+    @staticmethod
+    def _execute_command(
+        game: Game, player: Player, command_type: str, card_name: str | None
+    ) -> None:
+        if command_type == "play":
+            assert card_name is not None
+            game.play_land(player, card_name)
+        elif command_type == "move":
+            game.move()
+        elif command_type == "pass":
+            game.pass_turn()
+        else:
+            assert card_name is not None
+            game.discard(player, card_name)
+
+    async def events_after(self, seat_index: int, after: int, wait: float) -> EventsResponse:
+        """Long-poll for events after a sequence, redacting private draw data.
+
+        Args:
+            seat_index: Seat identified by the bearer token.
+            after: Last sequence already received by the client.
+            wait: Maximum number of seconds to wait for a new event.
+
+        Returns:
+            All currently available later events, with private card data redacted.
+        """
+        async with self.event_condition:
+            deadline = asyncio.get_running_loop().time() + wait
+            while not any(event.seq > after for event in self.events):
+                remaining = deadline - asyncio.get_running_loop().time()
+                if remaining <= 0:
+                    break
+                try:
+                    await asyncio.wait_for(self.event_condition.wait(), remaining)
+                except TimeoutError:
+                    break
+            return EventsResponse(events=self._events_for_seat(seat_index, after))
+
+    def _events_for_seat(self, seat_index: int, after: int) -> list[EventResponse]:
+        return [self._redact_event(seat_index, event) for event in self.events if event.seq > after]
+
+    @staticmethod
+    def _redact_event(seat_index: int, event: EventResponse) -> EventResponse:
+        data = event.data.copy()
+        if event.type == "draw" and data.get("seat") != seat_index:
+            data.pop("card", None)
+        return EventResponse(seq=event.seq, type=event.type, data=data)
 
     async def authenticate(self, token: str | None) -> int:
         """Resolve a bearer token to its Seat while holding the state lock.
