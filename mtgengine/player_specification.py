@@ -9,3 +9,4 @@ class PlayerSpecification:
 
     name: str
     decklist: str
+    starting_life: int = 20

@@ -43,3 +43,23 @@ _Avoid_: Outcome, score
 **Empty-Library Loss**:
 The loss suffered by a player who attempts to draw from an empty deck.
 _Avoid_: Decking, milled out
+
+**Maximum Hand Size**:
+The number of cards a player may hold at cleanup; normally seven.
+_Avoid_: Hand limit
+
+**Move**:
+A player command that advances the game by exactly one step or phase.
+_Avoid_: Next, advance
+
+**Pass**:
+A player command that advances through every remaining step and phase of the Active Player's turn, stopping only where a player decision is required; every step and phase passed through still occurs.
+_Avoid_: End turn, skip
+
+**MTGTable**:
+The whole interactive system that lets people play a game of the engine: one shared game and one seat per participant.
+_Avoid_: Platform, app
+
+**Seat**:
+A fixed position in a game occupied by one participant, numbered in join order; turn order follows seat order.
+_Avoid_: Slot, player number

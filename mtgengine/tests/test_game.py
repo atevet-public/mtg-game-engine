@@ -38,11 +38,11 @@ class TestGame:
         assert len(game.players) == 1
         assert game.players[0] is player
 
-    def test_play_requires_two_players(self) -> None:
+    def test_play_requires_at_least_two_players(self) -> None:
         """Reject running an MVP game with an unsupported player count."""
         game = Game([Player("Solo", 20)])
 
-        with pytest.raises(ValueError, match="exactly two"):
+        with pytest.raises(ValueError, match="at least two"):
             game.play()
 
     def test_game_requires_at_least_one_player(self) -> None:
@@ -298,6 +298,42 @@ def test_empty_deck_draw_attempt_ends_game_for_the_player_who_attempted_it() -> 
     assert game.result is not None
     assert game.result.loser is game.players[1]
     assert game.result.winner is game.players[0]
+
+
+def test_empty_deck_loss_eliminates_a_player_without_ending_multiplayer_game() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20), Player("Cara", 20)])
+
+    game.players[1].draw_from_deck(1)
+
+    assert game.result is None
+
+    game.advance_to_next_player()
+    assert game.turn.active_player is game.players[2]
+    game.players[2].draw_from_deck(1)
+
+    assert game.result is not None
+    assert game.result.loser is game.players[2]
+    assert game.result.winner is game.players[0]
+
+
+def test_eliminating_the_starting_player_preserves_turn_number_for_remaining_seats() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20), Player("Cara", 20)])
+    for player_index, player in enumerate(game.players):
+        for card_number in range(8):
+            player.deck.add_card(Card(f"Land {card_number}", "Land", player_index))
+    game.start_game()
+    eliminated_starting_player = game.turn.active_player
+    for card in eliminated_starting_player.deck.get_cards():
+        eliminated_starting_player.deck.remove_card(card)
+
+    eliminated_starting_player.draw_from_deck(1)
+    game.advance_to_next_player()
+    assert game.turn.turn_number == 1
+
+    game.advance_to_next_player()
+    assert game.turn.turn_number == 1
+    game.advance_to_next_player()
+    assert game.turn.turn_number == 2
 
 
 def test_empty_deck_draw_attempt_ends_game_with_player_identity_result() -> None:
