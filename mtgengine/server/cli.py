@@ -9,7 +9,11 @@ from mtgengine.server.app import create_app
 
 
 def main(arguments: Sequence[str] | None = None) -> None:
-    """Run the single-worker server after parsing the ``mtgtable serve`` command."""
+    """Run the single-worker server after parsing the ``mtgtable serve`` command.
+
+    Args:
+        arguments: Optional command-line arguments; defaults to process arguments.
+    """
     parser = argparse.ArgumentParser(prog="mtgtable")
     commands = parser.add_subparsers(dest="command", required=True)
     serve = commands.add_parser(

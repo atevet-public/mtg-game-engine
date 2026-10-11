@@ -30,19 +30,49 @@ from mtgengine.server.api_models import (
     PlayerResponse,
     ZoneResponse,
 )
-from mtgengine.turn import (
-    TurnBeginningPhaseEvent,
-    TurnCombatPhaseEvent,
-    TurnEndingPhaseEvent,
-    TurnPostcombatMainPhaseEvent,
-    TurnPrecombatMainPhaseEvent,
-)
+from mtgengine.turn import TurnEvent
+
+_ZONE_NAMES = {"battlefield", "graveyard", "exile", "stack", "hand", "deck"}
+_PHASE_BY_EVENT_NAME = {
+    "beginning_phase": "beginning",
+    "untap_step": "beginning",
+    "upkeep_step": "beginning",
+    "draw_step": "beginning",
+    "first_main_phase": "main",
+    "combat_phase": "combat",
+    "beginning_of_combat_step": "combat",
+    "declare_attackers_step": "combat",
+    "declare_blockers_step": "combat",
+    "combat_damage_step": "combat",
+    "end_of_combat_step": "combat",
+    "second_main_phase": "main",
+    "ending_phase": "ending",
+    "end_step": "ending",
+    "cleanup_step": "ending",
+}
+_PHASE_EVENT_NAMES = {
+    "beginning_phase",
+    "first_main_phase",
+    "combat_phase",
+    "second_main_phase",
+    "ending_phase",
+}
 
 
 class LobbyError(Exception):
     """HTTP-safe lobby error with status and machine-readable code."""
 
+    status_code: int
+    code: str
+
     def __init__(self, status_code: int, code: str, message: str) -> None:
+        """Initialize an HTTP-safe error.
+
+        Args:
+            status_code: HTTP status to return.
+            code: Stable machine-readable error code.
+            message: Human-readable error explanation.
+        """
         super().__init__(message)
         self.status_code = status_code
         self.code = code
@@ -60,6 +90,15 @@ class Lobby:
     """Own one locked, in-memory lobby and its optional started Game."""
 
     def __init__(self, expected_players: int = 2, rng: random.Random | None = None) -> None:
+        """Initialize an empty Lobby.
+
+        Args:
+            expected_players: Required seat count; currently only two is supported.
+            rng: Optional random source passed into game setup.
+
+        Raises:
+            ValueError: If the requested seat count is not two.
+        """
         if expected_players != 2:
             raise ValueError("The server currently supports only two players")
         self.expected_players = expected_players
@@ -71,7 +110,17 @@ class Lobby:
         self.events: list[EventResponse] = []
 
     async def join(self, specification: PlayerSpecification) -> JoinResponse:
-        """Validate and claim a Seat, starting the Game after the final join."""
+        """Validate and claim a Seat, starting the Game after the final join.
+
+        Args:
+            specification: Player Specification to validate and assign.
+
+        Returns:
+            Bearer token and assigned Seat number.
+
+        Raises:
+            LobbyError: If the specification is invalid, duplicated, or the lobby is full.
+        """
         async with self.lock:
             if len(self.seats) >= self.expected_players:
                 raise LobbyError(409, "game_full", "The game already has all expected players")
@@ -156,51 +205,72 @@ class Lobby:
         self.events.append(EventResponse(seq=len(self.events) + 1, type=event_type, data=data))
 
     async def authenticate(self, token: str | None) -> int:
-        """Resolve a bearer token to its Seat while holding the state lock."""
+        """Resolve a bearer token to its Seat while holding the state lock.
+
+        Args:
+            token: Presented bearer token, if any.
+
+        Returns:
+            Zero-based Seat index.
+
+        Raises:
+            LobbyError: If the token is absent or invalid.
+        """
         async with self.lock:
             if token is None or token not in self.tokens:
                 raise LobbyError(401, "unauthorized", "A valid bearer token is required")
             return self.tokens[token]
 
     async def game_snapshot(self) -> GameResponse:
-        """Build a detached public game-state response under the state lock."""
+        """Build a detached public game-state response under the state lock.
+
+        Returns:
+            A response model containing only public game state.
+        """
         async with self.lock:
             game = self._require_started_game()
-            current_event = game.current_turn_event
-            phase, step = self._phase_and_step(current_event)
-            players = [
-                PlayerResponse(
-                    seat=index,
-                    name=player.name,
-                    life_total=player.life_total,
-                    hand_count=len(player.hand.get_cards()),
-                    graveyard=[
-                        self._card_response(game, card) for card in player.graveyard.get_cards()
-                    ],
-                )
-                for index, player in enumerate(game.players)
-            ]
-            result = (
-                GameResultResponse(**self._game_result_data(game, game.result))
-                if game.result is not None
-                else None
-            )
+            phase, step = self._phase_and_step(game.current_turn_event)
             return GameResponse(
                 active_seat=game.players.index(game.turn.active_player),
                 turn_number=game.turn.turn_number,
                 phase=phase,
                 step=step,
-                players=players,
-                battlefield=[
-                    self._card_response(game, card) for card in game.battlefield.get_cards()
-                ],
-                result=result,
+                players=self._player_responses(game),
+                battlefield=self._card_responses(game.battlefield.get_cards()),
+                result=self._result_response(game),
             )
+
+    @classmethod
+    def _player_responses(cls, game: Game) -> list[PlayerResponse]:
+        return [
+            PlayerResponse(
+                seat=index,
+                name=player.name,
+                life_total=player.life_total,
+                hand_count=len(player.hand.get_cards()),
+                graveyard=cls._card_responses(player.graveyard.get_cards()),
+            )
+            for index, player in enumerate(game.players)
+        ]
+
+    @staticmethod
+    def _result_response(game: Game) -> GameResultResponse | None:
+        if game.result is None:
+            return None
+        return GameResultResponse(**Lobby._game_result_data(game, game.result))
 
     async def hand_snapshot(
         self, seat_index: int, requested_seat: int | None = None
     ) -> HandResponse:
-        """Return the authenticated Seat's hand, rejecting cross-seat requests."""
+        """Return the authenticated Seat's hand, rejecting cross-seat requests.
+
+        Args:
+            seat_index: Seat identified by the bearer token.
+            requested_seat: Optional Seat requested by the caller.
+
+        Returns:
+            A response containing only the authenticated Seat's cards.
+        """
         async with self.lock:
             if requested_seat is not None and requested_seat != seat_index:
                 raise LobbyError(403, "forbidden_seat", "A Seat may only view its own hand")
@@ -208,7 +278,7 @@ class Lobby:
             player = self._player_for_seat(game, seat_index)
             return HandResponse(
                 seat=seat_index,
-                cards=[self._card_response(game, card) for card in player.hand.get_cards()],
+                cards=self._card_responses(player.hand.get_cards()),
             )
 
     async def zone_snapshot(
@@ -217,40 +287,55 @@ class Lobby:
         seat_index: int,
         requested_seat: int | None = None,
     ) -> ZoneResponse:
-        """Return a detached projection of a public Zone or the caller's private Zone."""
+        """Return a detached projection of a public Zone or the caller's private Zone.
+
+        Args:
+            zone_name: Name of the Zone to read.
+            seat_index: Seat identified by the bearer token.
+            requested_seat: Optional Seat selector for zone access.
+
+        Returns:
+            A detached list of visible cards in the requested Zone.
+        """
         async with self.lock:
             game = self._require_started_game()
             zone = zone_name.casefold()
-            if zone not in {"battlefield", "graveyard", "exile", "stack", "hand", "deck"}:
-                raise LobbyError(404, "zone_not_found", f"Unknown zone: {zone_name}")
-            if zone in {"hand", "deck"}:
-                target_seat = seat_index if requested_seat is None else requested_seat
-                if target_seat != seat_index:
-                    raise LobbyError(
-                        403, "forbidden_seat", "A Seat may only view its own private zones"
-                    )
-                player = self._player_for_seat(game, target_seat)
-                cards = player.hand.get_cards() if zone == "hand" else player.deck.get_cards()
-            elif zone == "battlefield":
-                cards = game.battlefield.get_cards()
-            elif zone == "stack":
-                cards = game.stack.get_cards()
-            else:
-                target_players = (
-                    [self._player_for_seat(game, requested_seat)]
-                    if requested_seat is not None
-                    else game.players
-                )
-                cards = [
-                    card
-                    for player in target_players
-                    for card in (
-                        player.graveyard if zone == "graveyard" else player.exile
-                    ).get_cards()
-                ]
-            return ZoneResponse(
-                zone=zone, cards=[self._card_response(game, card) for card in cards]
-            )
+            cards = self._zone_cards(game, zone, seat_index, requested_seat)
+            return ZoneResponse(zone=zone, cards=self._card_responses(cards))
+
+    def _zone_cards(
+        self, game: Game, zone: str, own_seat: int, requested_seat: int | None
+    ) -> list[Card]:
+        if zone not in _ZONE_NAMES:
+            raise LobbyError(404, "zone_not_found", f"Unknown zone: {zone}")
+        if zone in {"hand", "deck"}:
+            return self._private_zone_cards(game, zone, own_seat, requested_seat)
+        return self._public_zone_cards(game, zone, requested_seat)
+
+    def _private_zone_cards(
+        self, game: Game, zone: str, own_seat: int, requested_seat: int | None
+    ) -> list[Card]:
+        target_seat = own_seat if requested_seat is None else requested_seat
+        if target_seat != own_seat:
+            raise LobbyError(403, "forbidden_seat", "A Seat may only view its own private zones")
+        player = self._player_for_seat(game, target_seat)
+        return player.hand.get_cards() if zone == "hand" else player.deck.get_cards()
+
+    def _public_zone_cards(self, game: Game, zone: str, requested_seat: int | None) -> list[Card]:
+        if zone == "battlefield":
+            return game.battlefield.get_cards()
+        if zone == "stack":
+            return game.stack.get_cards()
+        players = (
+            [self._player_for_seat(game, requested_seat)]
+            if requested_seat is not None
+            else game.players
+        )
+        return [
+            card
+            for player in players
+            for card in (player.graveyard if zone == "graveyard" else player.exile).get_cards()
+        ]
 
     def _require_started_game(self) -> Game:
         if self.game is None:
@@ -264,14 +349,18 @@ class Lobby:
         return game.players[seat_index]
 
     @staticmethod
-    def _card_response(game: Game, card: Card) -> CardResponse:
+    def _card_response(card: Card) -> CardResponse:
         return CardResponse(
             name=card.name,
             card_type=card.card_type,
             tapped=card.tapped,
             owner_seat=card.owner_index,
-            controller_seat=card.owner_index,
+            controller_seat=card.controller_index,
         )
+
+    @classmethod
+    def _card_responses(cls, cards: list[Card]) -> list[CardResponse]:
+        return [cls._card_response(card) for card in cards]
 
     @staticmethod
     def _game_result_data(game: Game, result: GameResult) -> dict[str, object]:
@@ -283,17 +372,10 @@ class Lobby:
         }
 
     @staticmethod
-    def _phase_and_step(event: object | None) -> tuple[str | None, str | None]:
+    def _phase_and_step(event: TurnEvent | None) -> tuple[str | None, str | None]:
         if event is None:
             return None, None
-        if isinstance(event, TurnBeginningPhaseEvent):
-            return "beginning", None
-        if isinstance(event, TurnCombatPhaseEvent):
-            return "combat", None
-        if isinstance(event, TurnEndingPhaseEvent):
-            return "ending", None
-        if isinstance(event, TurnPrecombatMainPhaseEvent):
-            return "main", "precombat_main"
-        if isinstance(event, TurnPostcombatMainPhaseEvent):
-            return "main", "postcombat_main"
-        return "turn", getattr(type(event), "log_name", None)
+        event_name = type(event).log_name
+        phase = _PHASE_BY_EVENT_NAME[event_name]
+        step = None if event_name in _PHASE_EVENT_NAMES else event_name
+        return phase, step

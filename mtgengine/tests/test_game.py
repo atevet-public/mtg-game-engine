@@ -15,7 +15,7 @@ from mtgengine.events import (
 from mtgengine.game import Game
 from mtgengine.player import Player
 from mtgengine.tests.game_test_helpers import SelectSecondPlayerRandom
-from mtgengine.turn import TurnDrawStepEvent, TurnUntapStepEvent, TurnUpkeepStepEvent
+from mtgengine.turn import Turn, TurnDrawStepEvent, TurnUntapStepEvent, TurnUpkeepStepEvent
 from mtgengine.zone.battlefield import Battlefield
 from mtgengine.zone.stack import Stack
 
@@ -216,6 +216,18 @@ def test_perform_untap_step_only_untaps_active_players_lands() -> None:
 
     assert active_land.tapped is False
     assert inactive_land.tapped is True
+
+
+def test_untap_step_uses_controller_instead_of_owner() -> None:
+    game = Game([Player("Alice", 20), Player("Bob", 20)])
+    controlled_land = Card("Forest", "Land", owner_index=0, controller_index=1)
+    controlled_land.tap()
+    game.battlefield.add_card(controlled_land)
+    game.turn = Turn(1, game.players[1], game.events)
+
+    game.perform_untap_step()
+
+    assert controlled_land.tapped is False
 
 
 def test_perform_upkeep_step_logs_event() -> None:

@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from mtgengine.card import Card
 from mtgengine.server import cli
 from mtgengine.server.app import create_app
 
@@ -59,19 +60,29 @@ def test_join_starts_game_and_sequences_lobby_events() -> None:
 
 
 def test_authenticated_queries_return_public_state_and_only_own_hand() -> None:
-    with TestClient(create_app()) as client:
+    app = create_app()
+    with TestClient(app) as client:
         alice = join(client, "Alice")
         bob = join(client, "Bob")
         headers = {"Authorization": f"Bearer {alice['token']}"}
+        game = app.state.lobby.game
+        assert game is not None
+        game.battlefield.add_card(Card("Borrowed Forest", "Land", 0, controller_index=1))
+        game.move()
+        game.move()
 
-        game = client.get("/game", headers=headers)
+        game_state = client.get("/game", headers=headers)
         hand = client.get("/players/me/hand", headers=headers)
         private_zone = client.get("/zones/hand?seat=1", headers=headers)
         graveyard = client.get("/zones/graveyard", headers=headers)
 
-        assert game.status_code == 200
-        assert {player["seat"] for player in game.json()["players"]} == {0, 1}
-        assert game.json()["turn_number"] == 1
+        assert game_state.status_code == 200
+        assert {player["seat"] for player in game_state.json()["players"]} == {0, 1}
+        assert game_state.json()["turn_number"] == 1
+        assert game_state.json()["phase"] == "beginning"
+        assert game_state.json()["step"] == "untap_step"
+        assert game_state.json()["battlefield"][0]["owner_seat"] == 0
+        assert game_state.json()["battlefield"][0]["controller_seat"] == 1
         assert len(hand.json()["cards"]) == 7
         assert hand.json()["seat"] == 0
         assert private_zone.status_code == 403

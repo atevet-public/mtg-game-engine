@@ -112,7 +112,11 @@ class Game:
 
     @property
     def current_turn_event(self) -> TurnEvent | None:
-        """Return the most recently emitted phase or step event."""
+        """Return the most recently emitted phase or step event.
+
+        Returns:
+            The active turn event, or ``None`` before the first turn event.
+        """
         return self._current_turn_event
 
     @classmethod
@@ -233,7 +237,7 @@ class Game:
         """Untap permanents owned by the active player."""
         active_index = self.players.index(event.turn.active_player)
         for permanent in self.battlefield.get_cards():
-            if permanent.owner_index == active_index:
+            if permanent.controller_index == active_index:
                 permanent.untap()
 
     def perform_upkeep_step(self) -> None:

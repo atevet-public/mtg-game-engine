@@ -17,7 +17,15 @@ from mtgengine.server.lobby import Lobby, LobbyError
 
 
 def create_app(expected_players: int = 2, rng: random.Random | None = None) -> FastAPI:
-    """Create an isolated server application and in-memory Lobby."""
+    """Create an isolated server application and in-memory Lobby.
+
+    Args:
+        expected_players: Number of Seats required before the Game starts.
+        rng: Optional random source for deterministic game setup.
+
+    Returns:
+        A FastAPI application with an isolated Lobby.
+    """
     lobby = Lobby(expected_players, rng)
     app = FastAPI(title="MTGTable", version="0.1.0")
     app.state.lobby = lobby
