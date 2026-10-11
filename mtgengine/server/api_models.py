@@ -1,5 +1,7 @@
 """Pydantic request and response models shared by the MTGTable API."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -27,6 +29,21 @@ class EventResponse(BaseModel):
     seq: int
     type: str
     data: dict[str, object]
+
+
+class EventsResponse(BaseModel):
+    """Events returned by a command or long-poll request."""
+
+    events: list[EventResponse]
+
+
+class CommandRequest(BaseModel):
+    """Player command submitted to the server."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["play", "move", "pass", "discard"]
+    card: str | None = None
 
 
 class CardResponse(BaseModel):

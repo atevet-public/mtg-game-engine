@@ -3,10 +3,13 @@
 import random
 
 from fastapi import FastAPI, Header, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from mtgengine.player_specification import PlayerSpecification
 from mtgengine.server.api_models import (
+    CommandRequest,
+    EventsResponse,
     GameResponse,
     HandResponse,
     JoinResponse,
@@ -35,6 +38,16 @@ def create_app(expected_players: int = 2, rng: random.Random | None = None) -> F
         return JSONResponse(
             status_code=error.status_code,
             content={"detail": {"code": error.code, "message": str(error)}},
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation_error(
+        _request: Request, error: RequestValidationError
+    ) -> JSONResponse:
+        message = "; ".join(item["msg"] for item in error.errors())
+        return JSONResponse(
+            status_code=422,
+            content={"detail": {"code": "invalid_request", "message": message}},
         )
 
     async def seat_from_authorization(authorization: str | None) -> int:
@@ -74,5 +87,22 @@ def create_app(expected_players: int = 2, rng: random.Random | None = None) -> F
     ) -> ZoneResponse:
         own_seat = await seat_from_authorization(authorization)
         return await lobby.zone_snapshot(zone_name, own_seat, seat)
+
+    @app.post("/commands", response_model=EventsResponse)
+    async def command(
+        request: CommandRequest,
+        authorization: str | None = Header(default=None),
+    ) -> EventsResponse:
+        seat = await seat_from_authorization(authorization)
+        return await lobby.command(seat, request.type, request.card)
+
+    @app.get("/events", response_model=EventsResponse)
+    async def events(
+        after: int = Query(default=0, ge=0),
+        wait: float = Query(default=30.0, ge=0.0, le=30.0),
+        authorization: str | None = Header(default=None),
+    ) -> EventsResponse:
+        seat = await seat_from_authorization(authorization)
+        return await lobby.events_after(seat, after, wait)
 
     return app
