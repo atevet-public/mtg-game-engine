@@ -23,6 +23,13 @@ class JoinResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class SeatResponse(BaseModel):
+    """Seat restored from an existing bearer token."""
+
+    seat: int
+    name: str
+
+
 class EventResponse(BaseModel):
     """Sequenced server-side game or lobby event."""
 

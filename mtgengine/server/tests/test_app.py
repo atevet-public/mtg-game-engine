@@ -111,9 +111,11 @@ def test_persistent_bearer_token_reconnects_to_the_same_seat() -> None:
 
         rejoined_hand = client.get("/players/me/hand", headers=headers)
         game = client.get("/game", headers=headers)
+        rejoined_seat = client.get("/rejoin", headers=headers)
 
         assert rejoined_hand.status_code == 200
         assert rejoined_hand.json()["seat"] == alice["seat"]
+        assert rejoined_seat.json()["seat"] == alice["seat"]
         assert {player["seat"] for player in game.json()["players"]} == {0, 1}
 
 
