@@ -22,6 +22,7 @@ from mtgengine.server.api_models import (
     HandResponse,
     JoinResponse,
     PlayerResponse,
+    SeatResponse,
     ZoneResponse,
 )
 from mtgengine.turn import Turn, TurnEvent
@@ -310,6 +311,21 @@ class Lobby:
             if token is None or token not in self.tokens:
                 raise LobbyError(401, "unauthorized", "A valid bearer token is required")
             return self.tokens[token]
+
+    async def seat_snapshot(self, seat_index: int) -> SeatResponse:
+        """Return the persistent Seat associated with a valid bearer token.
+
+        Args:
+            seat_index: Seat index resolved from the bearer token.
+
+        Returns:
+            The Seat and its player name.
+        """
+        async with self.lock:
+            if seat_index < 0 or seat_index >= len(self.seats):
+                raise LobbyError(404, "seat_not_found", "The requested Seat does not exist")
+            seat = self.seats[seat_index]
+            return SeatResponse(seat=seat.index, name=seat.specification.name)
 
     async def game_snapshot(self) -> GameResponse:
         """Build a detached public game-state response under the state lock.

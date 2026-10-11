@@ -14,6 +14,7 @@ from mtgengine.server.api_models import (
     HandResponse,
     JoinResponse,
     PlayerSpecificationRequest,
+    SeatResponse,
     ZoneResponse,
 )
 from mtgengine.server.lobby import Lobby, LobbyError
@@ -78,6 +79,11 @@ def create_app(expected_players: int = 2, rng: random.Random | None = None) -> F
     ) -> HandResponse:
         own_seat = await seat_from_authorization(authorization)
         return await lobby.hand_snapshot(own_seat, seat)
+
+    @app.get("/rejoin", response_model=SeatResponse)
+    async def rejoin(authorization: str | None = Header(default=None)) -> SeatResponse:
+        seat = await seat_from_authorization(authorization)
+        return await lobby.seat_snapshot(seat)
 
     @app.get("/zones/{zone_name}", response_model=ZoneResponse)
     async def zone(
