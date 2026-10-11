@@ -47,7 +47,7 @@ def test_game_factory_builds_two_players_and_their_basic_land_decks() -> None:
     "specifications",
     [(), (PlayerSpecification("Alice", create_decklist_entry()),)],
 )
-def test_game_factory_requires_at_least_two_players(
+def test_game_factory_delegates_player_count_validation_to_game_constructor(
     specifications: tuple[PlayerSpecification, ...],
 ) -> None:
     with pytest.raises(ValueError, match="at least two"):
@@ -76,7 +76,7 @@ def test_multiplayer_game_continues_after_eliminating_the_first_player() -> None
     result = game.play()
 
     assert result.winner in game.players
-    assert result.loser in game.players
+    assert result.losers[0] in game.players
 
 
 @pytest.mark.parametrize("names", [("", "Bob"), ("  ", "Bob"), (" Alice ", "alice")])
@@ -117,7 +117,7 @@ def test_play_returns_result_when_a_player_attempts_to_draw_from_empty_deck() ->
 
     assert result == GameResult(
         winner=game.players[1],
-        loser=game.players[0],
+        losers=[game.players[0]],
         turn_number=54,
         reason="empty_library",
     )

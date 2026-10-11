@@ -54,30 +54,25 @@ class Game:
         self,
         players: list[Player],
         *,
-        maximum_hand_size: int = 7,
         auto_play_land: bool = True,
         auto_discard: bool = True,
     ) -> None:
-        """Initialize a Game with one or more players and shared game zones.
+        """Initialize a Game with at least two players and shared game zones.
 
         The battlefield is modeled as a shared zone. Deck, hand, graveyard, and
         exile remain player-owned zones in the current model. The stack is shared.
 
         Args:
-            players: List of players in the game (must have at least one).
-            maximum_hand_size: Number of cards allowed at cleanup; defaults to seven.
+            players: List of players in the game (must have at least two).
             auto_play_land: Whether the legacy automatic Land Drop remains enabled.
             auto_discard: Whether the legacy automatic cleanup discard remains enabled.
 
         Raises:
-            ValueError: If players list is empty.
+            ValueError: If fewer than two players are provided.
         """
-        if not players:
-            raise ValueError("A game must have at least one player")
+        if len(players) < 2:
+            raise ValueError("A game requires at least two players")
         self.players: list[Player] = players
-        if maximum_hand_size < 0:
-            raise ValueError("Maximum Hand Size must not be negative")
-        self.maximum_hand_size = maximum_hand_size
         self.auto_play_land = auto_play_land
         self.auto_discard = auto_discard
         self.events = EventBus()
@@ -94,8 +89,8 @@ class Game:
         self._starting_player_index = 0
         self._starting_player_first_draw_skipped = False
         self._skip_next_turn_counter_increment = False
-        self._eliminated_players: set[Player] = set()
         self._land_drop_used = False
+        self._suppress_automatic_actions = False
         self._has_started = False
         self.events.subscribe(TurnUntapStepEvent, self._handle_untap_step)
         self.events.subscribe(TurnDrawStepEvent, self._handle_draw_step)
@@ -115,17 +110,15 @@ class Game:
         cls,
         *specs: PlayerSpecification,
         rng: random.Random | None = None,
-        maximum_hand_size: int = 7,
         auto_play_land: bool = True,
         auto_discard: bool = True,
     ) -> Game:
-        """Build a game with at least two players from names and basic-land decklists.
+        """Build a game from names and basic-land decklists.
 
         Args:
-            *specs: Two or more player specifications.
+            *specs: Player specifications for at least two players.
             rng: Random source used for game setup and play. Defaults to a new
                 ``random.Random``.
-            maximum_hand_size: Number of cards allowed at cleanup; defaults to seven.
             auto_play_land: Whether to retain automatic Land Drops.
             auto_discard: Whether to retain automatic cleanup discards.
 
@@ -142,7 +135,6 @@ class Game:
         ]
         game = cls(
             players,
-            maximum_hand_size=maximum_hand_size,
             auto_play_land=auto_play_land,
             auto_discard=auto_discard,
         )
@@ -152,8 +144,6 @@ class Game:
 
     @staticmethod
     def _validate_player_specifications(specs: tuple[PlayerSpecification, ...]) -> list[str]:
-        if len(specs) < 2:
-            raise ValueError("A game requires at least two player specifications")
         names = [spec.name.strip() for spec in specs]
         if any(not name for name in names):
             raise ValueError("Player names must not be empty")
@@ -260,7 +250,7 @@ class Game:
 
     def _handle_first_main_phase(self, event: TurnPrecombatMainPhaseEvent) -> None:
         """Make an automatic MVP Land Drop during the precombat main phase."""
-        if not self._is_over() and self.auto_play_land:
+        if not self._is_over() and self.auto_play_land and not self._suppress_automatic_actions:
             self.perform_play_land()
 
     def move(self) -> TurnEvent:
@@ -271,7 +261,7 @@ class Game:
         """
         self._require_started()
         self._require_not_over()
-        if self.turn.active_player in self._eliminated_players:
+        if self._player_has_lost(self.turn.active_player):
             self.advance_to_next_player()
         try:
             event = next(self._turn_events)
@@ -282,7 +272,7 @@ class Game:
         return event
 
     def pass_turn(self) -> TurnEvent | None:
-        """Advance through this turn to a decision or the next player's first main phase.
+        """Skip optional actions, stopping for cleanup choices or next player's first main.
 
         Returns:
             The event where the game pauses, or ``None`` if the game ends while advancing.
@@ -292,7 +282,11 @@ class Game:
         cleanup_event = self._cleanup_decision_event()
         if cleanup_event is not None:
             return cleanup_event
-        return self._advance_to_player_decision()
+        self._suppress_automatic_actions = True
+        try:
+            return self._advance_to_player_decision()
+        finally:
+            self._suppress_automatic_actions = False
 
     def _cleanup_decision_event(self) -> TurnCleanupStepEvent | None:
         if isinstance(self._current_turn_event, TurnCleanupStepEvent) and self._is_player_decision(
@@ -359,7 +353,7 @@ class Game:
             raise WrongPhaseError("A card may only be discarded during the cleanup step")
 
     def _require_discard_needed(self, player: Player) -> None:
-        if len(player.hand.get_cards()) <= self.maximum_hand_size:
+        if not player.exceeds_maximum_hand_size:
             raise DiscardNotRequiredError("The hand does not exceed Maximum Hand Size")
 
     def _require_active_player(self, player: Player) -> None:
@@ -367,7 +361,7 @@ class Game:
         self._require_not_over()
         if player not in self.players:
             raise PlayerNotInGameError("The player is not part of this game")
-        if player in self._eliminated_players:
+        if self._player_has_lost(player):
             raise PlayerEliminatedError("An eliminated player cannot take actions")
         if player is not self.turn.active_player:
             raise NotYourTurnError("Only the Active Player may take this action")
@@ -395,14 +389,9 @@ class Game:
         return card
 
     def _is_player_decision(self, event: TurnEvent) -> bool:
-        if isinstance(event, (TurnPrecombatMainPhaseEvent, TurnPostcombatMainPhaseEvent)):
-            return (
-                not self._land_drop_used
-                and self._first_land_in_hand(self.turn.active_player) is not None
-            )
         return (
             isinstance(event, TurnCleanupStepEvent)
-            and len(self.turn.active_player.hand.get_cards()) > self.maximum_hand_size
+            and self.turn.active_player.exceeds_maximum_hand_size
         )
 
     def perform_play_land(self) -> bool:
@@ -446,10 +435,10 @@ class Game:
 
     def _handle_cleanup_step(self, event: TurnCleanupStepEvent) -> None:
         """Discard excess cards from the Active Player's hand to their graveyard."""
-        if self._is_over() or not self.auto_discard:
+        if self._is_over() or not self.auto_discard or self._suppress_automatic_actions:
             return
         player = event.turn.active_player
-        while len(player.hand.get_cards()) > self.maximum_hand_size:
+        while player.exceeds_maximum_hand_size:
             self._discard_card(player)
 
     def _discard_card(self, player: Player) -> None:
@@ -463,7 +452,7 @@ class Game:
         if self._is_over():
             return
         active_index = self.players.index(self.turn.active_player)
-        next_seat = self._next_non_eliminated_seat(active_index)
+        next_seat = self._next_non_losing_seat(active_index)
         if next_seat is None:
             return
         next_index, next_player = next_seat
@@ -481,11 +470,11 @@ class Game:
         """Perform the current turn and advance to the next player."""
         if self._is_over():
             return
-        if self.turn.active_player in self._eliminated_players:
+        if self._player_has_lost(self.turn.active_player):
             self.advance_to_next_player()
             return
         self.perform_beginning_phase()
-        if self.turn.active_player in self._eliminated_players:
+        if self._player_has_lost(self.turn.active_player):
             self.advance_to_next_player()
             return
         self.perform_first_main_phase()
@@ -496,8 +485,6 @@ class Game:
 
     def play(self) -> GameResult:
         """Run the lands-only game until an Empty-Library Loss ends it."""
-        if len(self.players) < 2:
-            raise ValueError("A game requires at least two players to play")
         if not self._has_started:
             self.start_game()
         while not self._is_over():
@@ -510,40 +497,40 @@ class Game:
         if self._is_over() or event.player not in self.players:
             return
         loser = event.player
-        if loser in self._eliminated_players:
+        if self._player_has_lost(loser):
             return
-        self._eliminated_players.add(loser)
-        remaining_players = [
-            player for player in self.players if player not in self._eliminated_players
-        ]
-        if len(remaining_players) > 1:
+        losers = self.result.losers + [loser] if self.result is not None else [loser]
+        remaining_players = [player for player in self.players if player not in losers]
+        winner = remaining_players[0] if len(remaining_players) == 1 else None
+        self.result = GameResult(winner, losers, self.turn.turn_number)
+        if winner is None:
             if loser is self._starting_player:
                 self._set_next_starting_player(loser)
             return
-        if not remaining_players:
-            return
         # TODO: Apply this loss at the next state-based-action check (CR 704.5b).
-        self.result = GameResult(remaining_players[0], loser, self.turn.turn_number)
         self.events.emit(GameOverEvent(self.result))
 
     def _set_next_starting_player(self, loser: Player) -> None:
         loser_index = self.players.index(loser)
-        next_seat = self._next_non_eliminated_seat(loser_index)
+        next_seat = self._next_non_losing_seat(loser_index)
         if next_seat is None:
             return
         self._starting_player_index, self._starting_player = next_seat
         self._skip_next_turn_counter_increment = True
 
-    def _next_non_eliminated_seat(self, after_index: int) -> tuple[int, Player] | None:
+    def _next_non_losing_seat(self, after_index: int) -> tuple[int, Player] | None:
         for offset in range(1, len(self.players) + 1):
             index = (after_index + offset) % len(self.players)
             player = self.players[index]
-            if player not in self._eliminated_players:
+            if not self._player_has_lost(player):
                 return index, player
         return None
 
+    def _player_has_lost(self, player: Player) -> bool:
+        return self.result is not None and player in self.result.losers
+
     def _is_over(self) -> bool:
-        return self.result is not None
+        return self.result is not None and self.result.winner is not None
 
     def _emit_step_event(self, event_type: Callable[[Turn], object]) -> None:
         assert self.turn

@@ -25,19 +25,66 @@ from mtgengine.turn import (
     TurnUntapStepEvent,
 )
 
+TURN_EVENT_NAMES = {
+    "beginning_phase",
+    "untap_step",
+    "upkeep_step",
+    "draw_step",
+    "first_main_phase",
+    "combat_phase",
+    "beginning_of_combat_step",
+    "declare_attackers_step",
+    "declare_blockers_step",
+    "combat_damage_step",
+    "end_of_combat_step",
+    "second_main_phase",
+    "ending_phase",
+    "end_step",
+    "cleanup_step",
+}
+PASS_EVENT_TAIL = [
+    "combat_phase",
+    "beginning_of_combat_step",
+    "declare_attackers_step",
+    "declare_blockers_step",
+    "combat_damage_step",
+    "end_of_combat_step",
+    "second_main_phase",
+    "ending_phase",
+    "end_step",
+    "cleanup_step",
+    "beginning_phase",
+    "untap_step",
+    "upkeep_step",
+    "draw_step",
+    "first_main_phase",
+]
 
-def game_with_opening_decks(maximum_hand_size: int = 7) -> Game:
+
+def game_with_opening_decks(
+    maximum_hand_size: int = 7,
+    *,
+    auto_play_land: bool = False,
+    auto_discard: bool = False,
+) -> Game:
     game = Game(
-        [Player("Alice", 20), Player("Bob", 20)],
-        maximum_hand_size=maximum_hand_size,
-        auto_play_land=False,
-        auto_discard=False,
+        [
+            Player("Alice", 20, maximum_hand_size=maximum_hand_size),
+            Player("Bob", 20, maximum_hand_size=maximum_hand_size),
+        ],
+        auto_play_land=auto_play_land,
+        auto_discard=auto_discard,
     )
     for player_index, player in enumerate(game.players):
         for card_number in range(10):
             player.deck.add_card(Card(f"Forest {card_number}", "Land", player_index))
     game.start_game()
     return game
+
+
+def advance_to_precombat_main(game: Game) -> None:
+    while not isinstance(game.move(), TurnPrecombatMainPhaseEvent):
+        pass
 
 
 def test_move_advances_exactly_one_phase_or_step() -> None:
@@ -51,23 +98,26 @@ def test_move_advances_exactly_one_phase_or_step() -> None:
     assert [entry["type"] for entry in game.event_log[-2:]] == ["beginning_phase", "untap_step"]
 
 
-def test_pass_turn_fast_forwards_to_the_first_available_land_action() -> None:
-    game = game_with_opening_decks()
+def test_pass_skips_optional_land_drop_and_stops_at_next_players_first_main() -> None:
+    game = game_with_opening_decks(
+        maximum_hand_size=8,
+        auto_play_land=True,
+        auto_discard=True,
+    )
     active_player = game.turn.active_player
     land = Card("Chosen Forest", "Land", game.players.index(active_player))
     active_player.hand.add_card(land)
 
     event = game.pass_turn()
 
+    next_player = next(player for player in game.players if player is not active_player)
     assert isinstance(event, TurnPrecombatMainPhaseEvent)
-    assert game.turn.active_player is active_player
-    assert [entry["type"] for entry in game.event_log[-5:]] == [
-        "beginning_phase",
-        "untap_step",
-        "upkeep_step",
-        "draw_step",
-        "first_main_phase",
+    assert game.turn.active_player is next_player
+    assert land in active_player.hand.get_cards()
+    emitted_turn_events = [
+        entry["type"] for entry in game.event_log if entry["type"] in TURN_EVENT_NAMES
     ]
+    assert emitted_turn_events[-15:] == PASS_EVENT_TAIL
 
 
 def test_play_land_matches_case_insensitively_and_moves_only_the_named_card() -> None:
@@ -77,7 +127,7 @@ def test_play_land_matches_case_insensitively_and_moves_only_the_named_card() ->
     other_land = Card("Other Forest", "Land", game.players.index(player))
     player.hand.add_card(land)
     player.hand.add_card(other_land)
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
+    advance_to_precombat_main(game)
 
     game.play_land(player, "cHoSeN fOrEsT")
 
@@ -91,7 +141,7 @@ def test_play_land_rejects_wrong_player_wrong_phase_and_a_second_land_drop() -> 
     other_player = next(candidate for candidate in game.players if candidate is not player)
     land = Card("Chosen Forest", "Land", game.players.index(player))
     player.hand.add_card(land)
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
+    advance_to_precombat_main(game)
 
     with pytest.raises(NotYourTurnError) as wrong_player:
         game.play_land(other_player, "Chosen Forest")
@@ -110,7 +160,7 @@ def test_play_land_rejects_calls_outside_a_main_phase_and_missing_cards() -> Non
         game.play_land(player, "Missing Forest")
     assert wrong_phase.value.code == "wrong_phase"
 
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
+    advance_to_precombat_main(game)
     with pytest.raises(CardNotInHandError) as missing_card:
         game.play_land(player, "Missing Forest")
     assert missing_card.value.code == "card_not_in_hand"
@@ -121,7 +171,7 @@ def test_play_land_rejects_nonlands_in_hand() -> None:
     player = game.turn.active_player
     spell = Card("Lightning Bolt", "Instant", game.players.index(player))
     player.hand.add_card(spell)
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
+    advance_to_precombat_main(game)
 
     with pytest.raises(NotALandError) as not_a_land:
         game.play_land(player, spell.name)
@@ -129,11 +179,11 @@ def test_play_land_rejects_nonlands_in_hand() -> None:
 
 
 def test_pass_turn_stops_for_required_cleanup_discard() -> None:
-    game = game_with_opening_decks()
+    game = game_with_opening_decks(auto_discard=True)
     player = game.turn.active_player
     land = Card("Chosen Forest", "Land", game.players.index(player))
     player.hand.add_card(land)
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
+    advance_to_precombat_main(game)
     game.play_land(player, land.name)
     discarded = Card("Discard me", "Creature", game.players.index(player))
     extras = [
@@ -151,7 +201,7 @@ def test_pass_turn_stops_for_required_cleanup_discard() -> None:
 
     assert discarded in player.graveyard.get_cards()
     assert discarded not in player.hand.get_cards()
-    assert len(player.hand.get_cards()) == game.maximum_hand_size
+    assert len(player.hand.get_cards()) == player.maximum_hand_size
 
 
 def test_discard_rejects_calls_when_hand_does_not_exceed_its_limit() -> None:
@@ -167,7 +217,7 @@ def test_discard_rejects_calls_when_hand_does_not_exceed_its_limit() -> None:
 
 
 def test_pass_turn_finishes_turn_then_stops_at_the_next_players_main_phase() -> None:
-    game = game_with_opening_decks()
+    game = game_with_opening_decks(maximum_hand_size=8)
     first_player = game.turn.active_player
     next_player = game.players[(game.players.index(first_player) + 1) % len(game.players)]
     first_land = Card("First Forest", "Land", game.players.index(first_player))
@@ -175,73 +225,36 @@ def test_pass_turn_finishes_turn_then_stops_at_the_next_players_main_phase() -> 
     first_player.hand.add_card(first_land)
     next_player.hand.add_card(next_land)
 
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
-    game.play_land(first_player, first_land.name)
+    first_event = game.pass_turn()
+    assert isinstance(first_event, TurnPrecombatMainPhaseEvent)
+    assert game.turn.active_player is next_player
+    assert first_land in first_player.hand.get_cards()
+    game.play_land(next_player, next_land.name)
     event = game.pass_turn()
 
     assert isinstance(event, TurnPrecombatMainPhaseEvent)
-    assert game.turn.active_player is next_player
-    assert event.turn.active_player is next_player
-    turn_events = [
-        entry["type"]
-        for entry in game.event_log
-        if entry["type"]
-        in {
-            "combat_phase",
-            "beginning_of_combat_step",
-            "declare_attackers_step",
-            "declare_blockers_step",
-            "combat_damage_step",
-            "end_of_combat_step",
-            "second_main_phase",
-            "ending_phase",
-            "end_step",
-            "cleanup_step",
-            "beginning_phase",
-            "untap_step",
-            "upkeep_step",
-            "draw_step",
-            "first_main_phase",
-        }
-    ]
-    assert turn_events[-15:] == [
-        "combat_phase",
-        "beginning_of_combat_step",
-        "declare_attackers_step",
-        "declare_blockers_step",
-        "combat_damage_step",
-        "end_of_combat_step",
-        "second_main_phase",
-        "ending_phase",
-        "end_step",
-        "cleanup_step",
-        "beginning_phase",
-        "untap_step",
-        "upkeep_step",
-        "draw_step",
-        "first_main_phase",
-    ]
+    assert game.turn.active_player is first_player
+    assert event.turn.active_player is first_player
+    turn_events = [entry["type"] for entry in game.event_log if entry["type"] in TURN_EVENT_NAMES]
+    assert turn_events[-15:] == PASS_EVENT_TAIL
 
 
 def test_pass_uses_the_configured_maximum_hand_size() -> None:
-    game = game_with_opening_decks(maximum_hand_size=8)
+    game = game_with_opening_decks()
     player = game.turn.active_player
-    next_player = game.players[(game.players.index(player) + 1) % len(game.players)]
-    land = Card("Chosen Forest", "Land", game.players.index(player))
-    player.hand.add_card(land)
-    player.hand.add_card(Card("Keep at limit", "Creature", game.players.index(player)))
-    next_player.hand.add_card(Card("Next Forest", "Land", game.players.index(next_player)))
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
-    game.play_land(player, land.name)
+    player.maximum_hand_size = 8
+    player.hand.add_card(Card("Excess one", "Creature", game.players.index(player)))
+    player.hand.add_card(Card("Excess two", "Creature", game.players.index(player)))
+    advance_to_precombat_main(game)
 
     event = game.pass_turn()
 
-    assert isinstance(event, TurnPrecombatMainPhaseEvent)
-    assert game.turn.active_player is next_player
+    assert isinstance(event, TurnCleanupStepEvent)
+    assert len(player.hand.get_cards()) == 9
 
 
 def test_pass_stops_at_the_next_players_first_main_even_without_a_land() -> None:
-    game = game_with_opening_decks()
+    game = game_with_opening_decks(maximum_hand_size=8)
     player = game.turn.active_player
     next_player = game.players[(game.players.index(player) + 1) % len(game.players)]
     first_land = Card("First Forest", "Land", game.players.index(player))
@@ -255,13 +268,12 @@ def test_pass_stops_at_the_next_players_first_main_even_without_a_land() -> None
             Card(f"Spell {card_number}", "Instant", game.players.index(next_player))
         )
 
-    assert isinstance(game.pass_turn(), TurnPrecombatMainPhaseEvent)
-    game.play_land(player, first_land.name)
     event = game.pass_turn()
 
     assert isinstance(event, TurnPrecombatMainPhaseEvent)
     assert game.turn.active_player is next_player
     assert not any(card.card_type == "Land" for card in next_player.hand.get_cards())
+    assert first_land in player.hand.get_cards()
 
 
 def test_player_commands_raise_typed_errors_before_start_and_after_game_over() -> None:
@@ -272,7 +284,7 @@ def test_player_commands_raise_typed_errors_before_start_and_after_game_over() -
     assert not_started.value.code == "game_not_started"
 
     game.start_game()
-    game.result = GameResult(game.players[1], game.players[0], 1)
+    game.result = GameResult(game.players[1], [game.players[0]], 1)
     with pytest.raises(GameOverError) as game_over:
         game.pass_turn()
     assert game_over.value.code == "game_over"
