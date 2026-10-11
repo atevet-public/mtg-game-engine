@@ -37,6 +37,7 @@ class Card:
         toughness: int | None = None,
         loyalty: int | None = None,
         defense: int | None = None,
+        controller_index: int | None = None,
     ) -> None:
         """Initialize a Card.
 
@@ -63,6 +64,7 @@ class Card:
         # mana_cost defaults to zero cost
         self.mana_cost = mana_cost or ManaCost()
         self.owner_index = owner_index
+        self.controller_index = owner_index if controller_index is None else controller_index
 
         # Normalise iterables to concrete container types
         self.color_indicator = set(color_indicator or ())
@@ -106,3 +108,16 @@ class Card:
         if value < 0:
             raise ValueError("owner_index must be a non-negative int")
         self._owner_index = value
+
+    @property
+    def controller_index(self) -> int:
+        """Seat index of the player who currently controls this card."""
+        return self._controller_index
+
+    @controller_index.setter
+    def controller_index(self, value: int) -> None:
+        if not isinstance(value, int):
+            raise TypeError("controller_index must be an int")
+        if value < 0:
+            raise ValueError("controller_index must be a non-negative int")
+        self._controller_index = value

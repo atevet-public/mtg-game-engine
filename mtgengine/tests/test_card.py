@@ -68,6 +68,12 @@ class TestCard:
         card = Card("Owning Player Permanent", card_type="Creature", owner_index=owner_index)
         assert card.owner_index == owner_index
 
+    def test_card_controller_defaults_to_owner_and_can_differ(self) -> None:
+        card = Card("Controlled Card", "Creature", owner_index=0, controller_index=1)
+
+        assert card.owner_index == 0
+        assert card.controller_index == 1
+
     @pytest.mark.parametrize(
         ("owner_index", "expected_exception"),
         [
