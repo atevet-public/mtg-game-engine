@@ -110,6 +110,11 @@ class Game:
         """Return the event log collected by this game's logger."""
         return self.event_logger.entries
 
+    @property
+    def current_turn_event(self) -> TurnEvent | None:
+        """Return the most recently emitted phase or step event."""
+        return self._current_turn_event
+
     @classmethod
     def from_player_specification(
         cls,
